@@ -1,20 +1,17 @@
 #!/usr/bin/env sh
 set -eu
 
-# Downloads the latest tarball from https://zed.dev/releases and unpacks it
-# into ~/.local/. If you'd prefer to do this manually, instructions are at
-# https://zed.dev/docs/linux.
-
 main() {
     platform="$(uname -s)"
     arch="$(uname -m)"
     channel="${ZED_CHANNEL:-stable}"
-    temp="$(mktemp -d "/tmp/zed-XXXXXX")"
+    temp="$(mktemp -d "/tmp/zed-XXXXX")"
 
     if [ "$platform" = "Darwin" ]; then
         platform="macos"
     elif [ "$platform" = "Linux" ]; then
         platform="linux"
+        channel="${ZED_CHANNEL:-preview}"
     else
         echo "Unsupported platform $platform"
         exit 1
@@ -58,9 +55,6 @@ main() {
             *zsh)
                 echo "   echo 'export PATH=\$HOME/.local/bin:\$PATH' >> ~/.zshrc"
                 echo "   source ~/.zshrc"
-                ;;
-            *fish)
-                echo "   fish_add_path -U $HOME/.local/bin"
                 ;;
             *)
                 echo "   echo 'export PATH=\$HOME/.local/bin:\$PATH' >> ~/.bashrc"

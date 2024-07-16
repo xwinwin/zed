@@ -557,14 +557,6 @@ impl Peer {
         Ok(())
     }
 
-    pub fn send_dynamic(&self, receiver_id: ConnectionId, message: proto::Envelope) -> Result<()> {
-        let connection = self.connection_state(receiver_id)?;
-        connection
-            .outgoing_tx
-            .unbounded_send(proto::Message::Envelope(message))?;
-        Ok(())
-    }
-
     pub fn forward_send<T: EnvelopedMessage>(
         &self,
         sender_id: ConnectionId,

@@ -23,7 +23,7 @@ impl SlashCommand for NowSlashCommand {
     }
 
     fn menu_text(&self) -> String {
-        "Insert Current Date and Time".into()
+        "Insert current date and time".into()
     }
 
     fn requires_argument(&self) -> bool {

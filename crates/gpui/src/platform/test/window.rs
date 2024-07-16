@@ -23,7 +23,6 @@ pub(crate) struct TestWindowState {
     pub(crate) should_close_handler: Option<Box<dyn FnMut() -> bool>>,
     input_callback: Option<Box<dyn FnMut(PlatformInput) -> DispatchEventResult>>,
     active_status_change_callback: Option<Box<dyn FnMut(bool)>>,
-    hover_status_change_callback: Option<Box<dyn FnMut(bool)>>,
     resize_callback: Option<Box<dyn FnMut(Size<Pixels>, f32)>>,
     moved_callback: Option<Box<dyn FnMut()>>,
     input_handler: Option<PlatformInputHandler>,
@@ -67,7 +66,6 @@ impl TestWindow {
             should_close_handler: None,
             input_callback: None,
             active_status_change_callback: None,
-            hover_status_change_callback: None,
             resize_callback: None,
             moved_callback: None,
             input_handler: None,
@@ -184,10 +182,6 @@ impl PlatformWindow for TestWindow {
         false
     }
 
-    fn is_hovered(&self) -> bool {
-        false
-    }
-
     fn set_title(&mut self, title: &str) {
         self.0.lock().title = Some(title.to_owned());
     }
@@ -229,10 +223,6 @@ impl PlatformWindow for TestWindow {
 
     fn on_active_status_change(&self, callback: Box<dyn FnMut(bool)>) {
         self.0.lock().active_status_change_callback = Some(callback)
-    }
-
-    fn on_hover_status_change(&self, callback: Box<dyn FnMut(bool)>) {
-        self.0.lock().hover_status_change_callback = Some(callback)
     }
 
     fn on_resize(&self, callback: Box<dyn FnMut(Size<Pixels>, f32)>) {

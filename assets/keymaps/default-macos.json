@@ -83,7 +83,7 @@
       "ctrl-n": "editor::MoveDown",
       "ctrl-b": "editor::MoveLeft",
       "ctrl-f": "editor::MoveRight",
-      "ctrl-l": "editor::ScrollCursorCenter",
+      "ctrl-l": "editor::NextScreen",
       "alt-left": "editor::MoveToPreviousWordStart",
       "alt-b": "editor::MoveToPreviousWordStart",
       "alt-right": "editor::MoveToNextWordEnd",
@@ -126,8 +126,7 @@
       "cmd-alt-z": "editor::RevertSelectedHunks",
       "cmd-'": "editor::ToggleHunkDiff",
       "cmd-\"": "editor::ExpandAllHunkDiffs",
-      "cmd-alt-g b": "editor::ToggleGitBlame",
-      "cmd-i": "editor::ShowSignatureHelp"
+      "cmd-alt-g b": "editor::ToggleGitBlame"
     }
   },
   {
@@ -570,7 +569,7 @@
     }
   },
   {
-    "context": "Editor && jupyter && !ContextEditor",
+    "context": "Editor && jupyter",
     "bindings": {
       "cmd-enter": "repl::Run"
     }
@@ -595,14 +594,6 @@
     }
   },
   {
-    "context": "Picker > Editor",
-    "bindings": {
-      "tab": "picker::ConfirmCompletion",
-      "alt-enter": ["picker::ConfirmInput", { "secondary": false }],
-      "cmd-alt-enter": ["picker::ConfirmInput", { "secondary": true }]
-    }
-  },
-  {
     "context": "ChannelModal > Picker > Editor",
     "bindings": {
       "tab": "channel_modal::ToggleMode"
@@ -619,6 +610,14 @@
       "ctrl-down": "menu::SelectNext",
       "ctrl-shift-tab": "menu::SelectPrev",
       "ctrl-backspace": "tab_switcher::CloseSelectedItem"
+    }
+  },
+  {
+    "context": "Picker",
+    "bindings": {
+      "f2": "picker::UseSelectedQuery",
+      "alt-enter": ["picker::ConfirmInput", { "secondary": false }],
+      "cmd-alt-enter": ["picker::ConfirmInput", { "secondary": true }]
     }
   },
   {

@@ -300,9 +300,6 @@ pub struct ThemeColorsContent {
     #[serde(rename = "title_bar.background")]
     pub title_bar_background: Option<String>,
 
-    #[serde(rename = "title_bar.inactive_background")]
-    pub title_bar_inactive_background: Option<String>,
-
     #[serde(rename = "toolbar.background")]
     pub toolbar_background: Option<String>,
 
@@ -664,10 +661,6 @@ impl ThemeColorsContent {
                 .and_then(|color| try_parse_color(color).ok()),
             title_bar_background: self
                 .title_bar_background
-                .as_ref()
-                .and_then(|color| try_parse_color(color).ok()),
-            title_bar_inactive_background: self
-                .title_bar_inactive_background
                 .as_ref()
                 .and_then(|color| try_parse_color(color).ok()),
             toolbar_background: self

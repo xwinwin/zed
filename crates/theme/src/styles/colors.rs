@@ -113,7 +113,6 @@ pub struct ThemeColors {
     // ===
     pub status_bar_background: Hsla,
     pub title_bar_background: Hsla,
-    pub title_bar_inactive_background: Hsla,
     pub toolbar_background: Hsla,
     pub tab_bar_background: Hsla,
     pub tab_inactive_background: Hsla,

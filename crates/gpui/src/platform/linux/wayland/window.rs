@@ -36,7 +36,6 @@ pub(crate) struct Callbacks {
     request_frame: Option<Box<dyn FnMut()>>,
     input: Option<Box<dyn FnMut(crate::PlatformInput) -> crate::DispatchEventResult>>,
     active_status_change: Option<Box<dyn FnMut(bool)>>,
-    hover_status_change: Option<Box<dyn FnMut(bool)>>,
     resize: Option<Box<dyn FnMut(Size<Pixels>, f32)>>,
     moved: Option<Box<dyn FnMut()>>,
     should_close: Option<Box<dyn FnMut() -> bool>>,
@@ -98,7 +97,6 @@ pub struct WaylandWindowState {
     client: WaylandClientStatePtr,
     handle: AnyWindowHandle,
     active: bool,
-    hovered: bool,
     in_progress_configure: Option<InProgressConfigure>,
     in_progress_window_controls: Option<WindowControls>,
     window_controls: WindowControls,
@@ -183,7 +181,6 @@ impl WaylandWindowState {
             appearance,
             handle,
             active: false,
-            hovered: false,
             in_progress_window_controls: None,
             // Assume that we can do anything, unless told otherwise
             window_controls: WindowControls {
@@ -703,12 +700,6 @@ impl WaylandWindowStatePtr {
         }
     }
 
-    pub fn set_hovered(&self, focus: bool) {
-        if let Some(ref mut fun) = self.callbacks.borrow_mut().hover_status_change {
-            fun(focus);
-        }
-    }
-
     pub fn set_appearance(&mut self, appearance: WindowAppearance) {
         self.state.borrow_mut().appearance = appearance;
 
@@ -854,10 +845,6 @@ impl PlatformWindow for WaylandWindow {
         self.borrow().active
     }
 
-    fn is_hovered(&self) -> bool {
-        self.borrow().hovered
-    }
-
     fn set_title(&mut self, title: &str) {
         self.borrow().toplevel.set_title(title.to_string());
     }
@@ -910,10 +897,6 @@ impl PlatformWindow for WaylandWindow {
 
     fn on_active_status_change(&self, callback: Box<dyn FnMut(bool)>) {
         self.0.callbacks.borrow_mut().active_status_change = Some(callback);
-    }
-
-    fn on_hover_status_change(&self, callback: Box<dyn FnMut(bool)>) {
-        self.0.callbacks.borrow_mut().hover_status_change = Some(callback);
     }
 
     fn on_resize(&self, callback: Box<dyn FnMut(Size<Pixels>, f32)>) {

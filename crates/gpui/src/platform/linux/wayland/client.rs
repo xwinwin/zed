@@ -1119,10 +1119,7 @@ impl Dispatch<wl_keyboard::WlKeyboard, ()> for WaylandClientStatePtr {
                 let keyboard_focused_window = get_window(&mut state, &surface.id());
                 state.keyboard_focused_window = None;
                 state.enter_token.take();
-                // Prevent keyboard events from repeating after opening e.g. a file chooser and closing it quickly
-                state.repeat.current_id += 1;
                 state.clipboard.set_offer(None);
-                state.clipboard.set_primary_offer(None);
 
                 if let Some(window) = keyboard_focused_window {
                     if let Some(ref mut compose) = state.compose_state {
@@ -1406,7 +1403,6 @@ impl Dispatch<wl_pointer::WlPointer, ()> for WaylandClientStatePtr {
 
                 if let Some(window) = get_window(&mut state, &surface.id()) {
                     state.mouse_focused_window = Some(window.clone());
-
                     if state.enter_token.is_some() {
                         state.enter_token = None;
                     }
@@ -1420,7 +1416,7 @@ impl Dispatch<wl_pointer::WlPointer, ()> for WaylandClientStatePtr {
                         }
                     }
                     drop(state);
-                    window.set_hovered(true);
+                    window.set_focused(true);
                 }
             }
             wl_pointer::Event::Leave { .. } => {
@@ -1436,7 +1432,7 @@ impl Dispatch<wl_pointer::WlPointer, ()> for WaylandClientStatePtr {
 
                     drop(state);
                     focused_window.handle_input(input);
-                    focused_window.set_hovered(false);
+                    focused_window.set_focused(false);
                 }
             }
             wl_pointer::Event::Motion {

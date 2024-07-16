@@ -1,7 +1,6 @@
 use crate::persistence::model::DockData;
 use crate::{status_bar::StatusItemView, Workspace};
-use crate::{DraggedDock, Event, Pane};
-use client::proto;
+use crate::{DraggedDock, Event};
 use gpui::{
     deferred, div, px, Action, AnchorCorner, AnyView, AppContext, Axis, Entity, EntityId,
     EventEmitter, FocusHandle, FocusableView, IntoElement, KeyContext, MouseButton, MouseDownEvent,
@@ -24,8 +23,6 @@ pub enum PanelEvent {
     Close,
 }
 
-pub use proto::PanelId;
-
 pub trait Panel: FocusableView + EventEmitter<PanelEvent> {
     fn persistent_name() -> &'static str;
     fn position(&self, cx: &WindowContext) -> DockPosition;
@@ -47,12 +44,6 @@ pub trait Panel: FocusableView + EventEmitter<PanelEvent> {
     }
     fn set_zoomed(&mut self, _zoomed: bool, _cx: &mut ViewContext<Self>) {}
     fn set_active(&mut self, _active: bool, _cx: &mut ViewContext<Self>) {}
-    fn pane(&self) -> Option<View<Pane>> {
-        None
-    }
-    fn remote_id() -> Option<proto::PanelId> {
-        None
-    }
 }
 
 pub trait PanelHandle: Send + Sync {
@@ -64,8 +55,6 @@ pub trait PanelHandle: Send + Sync {
     fn is_zoomed(&self, cx: &WindowContext) -> bool;
     fn set_zoomed(&self, zoomed: bool, cx: &mut WindowContext);
     fn set_active(&self, active: bool, cx: &mut WindowContext);
-    fn remote_id(&self) -> Option<proto::PanelId>;
-    fn pane(&self, cx: &WindowContext) -> Option<View<Pane>>;
     fn size(&self, cx: &WindowContext) -> Pixels;
     fn set_size(&self, size: Option<Pixels>, cx: &mut WindowContext);
     fn icon(&self, cx: &WindowContext) -> Option<ui::IconName>;
@@ -110,14 +99,6 @@ where
 
     fn set_active(&self, active: bool, cx: &mut WindowContext) {
         self.update(cx, |this, cx| this.set_active(active, cx))
-    }
-
-    fn pane(&self, cx: &WindowContext) -> Option<View<Pane>> {
-        self.read(cx).pane()
-    }
-
-    fn remote_id(&self) -> Option<PanelId> {
-        T::remote_id()
     }
 
     fn size(&self, cx: &WindowContext) -> Pixels {
@@ -313,12 +294,6 @@ impl Dock {
         self.panel_entries
             .iter()
             .position(|entry| entry.panel.persistent_name() == ui_name)
-    }
-
-    pub fn panel_index_for_proto_id(&self, panel_id: PanelId) -> Option<usize> {
-        self.panel_entries
-            .iter()
-            .position(|entry| entry.panel.remote_id() == Some(panel_id))
     }
 
     pub fn active_panel_index(&self) -> usize {

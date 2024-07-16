@@ -7,13 +7,10 @@ use editor::{
     display_map::{
         BlockContext, BlockDisposition, BlockId, BlockProperties, BlockStyle, RenderBlock,
     },
-    Anchor, AnchorRangeExt as _, Editor, MultiBuffer, ToPoint,
+    Anchor, AnchorRangeExt as _, Editor,
 };
 use futures::{FutureExt as _, StreamExt as _};
-use gpui::{
-    div, prelude::*, EventEmitter, Model, Render, Subscription, Task, View, ViewContext, WeakView,
-};
-use language::Point;
+use gpui::{div, prelude::*, EventEmitter, Render, Task, View, ViewContext, WeakView};
 use project::Fs;
 use runtimelib::{
     ExecuteRequest, InterruptRequest, JupyterMessage, JupyterMessageContent, KernelInfoRequest,
@@ -25,18 +22,16 @@ use theme::{ActiveTheme, ThemeSettings};
 use ui::{h_flex, prelude::*, v_flex, ButtonLike, ButtonStyle, Label};
 
 pub struct Session {
-    pub editor: WeakView<Editor>,
-    pub kernel: Kernel,
+    editor: WeakView<Editor>,
+    kernel: Kernel,
     blocks: HashMap<String, EditorBlock>,
-    pub messaging_task: Task<()>,
-    pub kernel_specification: KernelSpecification,
-    _buffer_subscription: Subscription,
+    messaging_task: Task<()>,
+    kernel_specification: KernelSpecification,
 }
 
 struct EditorBlock {
     editor: WeakView<Editor>,
     code_range: Range<Anchor>,
-    invalidation_anchor: Anchor,
     block_id: BlockId,
     execution_view: View<ExecutionView>,
 }
@@ -50,25 +45,7 @@ impl EditorBlock {
     ) -> anyhow::Result<Self> {
         let execution_view = cx.new_view(|cx| ExecutionView::new(status, cx));
 
-        let (block_id, invalidation_anchor) = editor.update(cx, |editor, cx| {
-            let buffer = editor.buffer().clone();
-            let buffer_snapshot = buffer.read(cx).snapshot(cx);
-            let end_point = code_range.end.to_point(&buffer_snapshot);
-            let next_row_start = end_point + Point::new(1, 0);
-            if next_row_start > buffer_snapshot.max_point() {
-                buffer.update(cx, |buffer, cx| {
-                    buffer.edit(
-                        [(
-                            buffer_snapshot.max_point()..buffer_snapshot.max_point(),
-                            "\n",
-                        )],
-                        None,
-                        cx,
-                    )
-                });
-            }
-
-            let invalidation_anchor = buffer.read(cx).read(cx).anchor_before(next_row_start);
+        let block_id = editor.update(cx, |editor, cx| {
             let block = BlockProperties {
                 position: code_range.end,
                 height: execution_view.num_lines(cx).saturating_add(1),
@@ -77,14 +54,12 @@ impl EditorBlock {
                 disposition: BlockDisposition::Below,
             };
 
-            let block_id = editor.insert_blocks([block], None, cx)[0];
-            (block_id, invalidation_anchor)
+            editor.insert_blocks([block], None, cx)[0]
         })?;
 
         anyhow::Ok(Self {
             editor,
             code_range,
-            invalidation_anchor,
             block_id,
             execution_view,
         })
@@ -204,53 +179,13 @@ impl Session {
             })
             .shared();
 
-        let subscription = match editor.upgrade() {
-            Some(editor) => {
-                let buffer = editor.read(cx).buffer().clone();
-                cx.subscribe(&buffer, Self::on_buffer_event)
-            }
-            None => Subscription::new(|| {}),
-        };
-
         return Self {
             editor,
             kernel: Kernel::StartingKernel(pending_kernel),
             messaging_task: Task::ready(()),
             blocks: HashMap::default(),
             kernel_specification,
-            _buffer_subscription: subscription,
         };
-    }
-
-    fn on_buffer_event(
-        &mut self,
-        buffer: Model<MultiBuffer>,
-        event: &multi_buffer::Event,
-        cx: &mut ViewContext<Self>,
-    ) {
-        if let multi_buffer::Event::Edited { .. } = event {
-            let snapshot = buffer.read(cx).snapshot(cx);
-
-            let mut blocks_to_remove: HashSet<BlockId> = HashSet::default();
-
-            self.blocks.retain(|_id, block| {
-                if block.invalidation_anchor.is_valid(&snapshot) {
-                    true
-                } else {
-                    blocks_to_remove.insert(block.block_id);
-                    false
-                }
-            });
-
-            if !blocks_to_remove.is_empty() {
-                self.editor
-                    .update(cx, |editor, cx| {
-                        editor.remove_blocks(blocks_to_remove, None, cx);
-                    })
-                    .ok();
-                cx.notify();
-            }
-        }
     }
 
     fn send(&mut self, message: JupyterMessage, _cx: &mut ViewContext<Self>) -> anyhow::Result<()> {
@@ -375,7 +310,7 @@ impl Session {
         }
     }
 
-    pub fn interrupt(&mut self, cx: &mut ViewContext<Self>) {
+    fn interrupt(&mut self, cx: &mut ViewContext<Self>) {
         match &mut self.kernel {
             Kernel::RunningKernel(_kernel) => {
                 self.send(InterruptRequest {}.into(), cx).ok();
@@ -387,7 +322,7 @@ impl Session {
         }
     }
 
-    pub fn shutdown(&mut self, cx: &mut ViewContext<Self>) {
+    fn shutdown(&mut self, cx: &mut ViewContext<Self>) {
         let kernel = std::mem::replace(&mut self.kernel, Kernel::ShuttingDown);
 
         match kernel {

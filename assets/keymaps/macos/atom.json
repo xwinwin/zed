@@ -26,7 +26,6 @@
       "cmd-shift-d": "editor::DuplicateLineDown",
       "ctrl-cmd-up": "editor::MoveLineUp",
       "ctrl-cmd-down": "editor::MoveLineDown",
-      "cmd-\\": "workspace::ToggleLeftDock",
       "ctrl-shift-m": "markdown::OpenPreviewToTheSide"
     }
   },

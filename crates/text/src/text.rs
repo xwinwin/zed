@@ -1265,10 +1265,6 @@ impl Buffer {
         }
     }
 
-    pub fn has_deferred_ops(&self) -> bool {
-        !self.deferred_ops.is_empty()
-    }
-
     pub fn peek_undo_stack(&self) -> Option<&HistoryEntry> {
         self.history.undo_stack.last()
     }

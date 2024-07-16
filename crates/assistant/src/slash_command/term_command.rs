@@ -31,7 +31,7 @@ impl SlashCommand for TermSlashCommand {
     }
 
     fn menu_text(&self) -> String {
-        "Insert Terminal Output".into()
+        "Insert terminal output".into()
     }
 
     fn requires_argument(&self) -> bool {

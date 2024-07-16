@@ -341,9 +341,8 @@ dependencies = [
 
 [[package]]
 name = "ashpd"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfe7e0dd0ac5a401dc116ed9f9119cf9decc625600474cb41f0fc0a0050abc9a"
+version = "0.9.0"
+source = "git+https://github.com/bilelmoussaoui/ashpd?rev=29f2e1a#29f2e1a6f4b0911f504658f5f4630c02e01b13f2"
 dependencies = [
  "async-fs 2.1.1",
  "async-net 2.0.0",
@@ -378,7 +377,6 @@ dependencies = [
  "cargo_toml",
  "chrono",
  "client",
- "clock",
  "collections",
  "command_palette_hooks",
  "ctor",
@@ -421,7 +419,6 @@ dependencies = [
  "telemetry_events",
  "terminal",
  "terminal_view",
- "text",
  "theme",
  "tiktoken-rs",
  "toml 0.8.10",
@@ -2408,12 +2405,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "clipboard-win"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fdf5e01086b6be750428ba4a40619f847eb2e95756eee84b18e06e5f0b50342"
+dependencies = [
+ "lazy-bytes-cast",
+ "winapi",
+]
+
+[[package]]
 name = "clock"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "parking_lot",
- "serde",
  "smallvec",
 ]
 
@@ -2472,7 +2478,6 @@ version = "0.44.0"
 dependencies = [
  "anthropic",
  "anyhow",
- "assistant",
  "async-trait",
  "async-tungstenite",
  "audio",
@@ -3402,13 +3407,11 @@ dependencies = [
  "ctor",
  "editor",
  "env_logger",
- "feature_flags",
  "futures 0.3.28",
  "gpui",
  "language",
  "log",
  "lsp",
- "multi_buffer",
  "pretty_assertions",
  "project",
  "rand 0.8.5",
@@ -3613,7 +3616,6 @@ dependencies = [
  "linkify",
  "log",
  "lsp",
- "markdown",
  "multi_buffer",
  "ordered-float 2.10.0",
  "parking_lot",
@@ -3987,7 +3989,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "client",
- "collections",
  "db",
  "editor",
  "extension",
@@ -4007,7 +4008,6 @@ dependencies = [
  "theme_selector",
  "ui",
  "util",
- "vim",
  "workspace",
 ]
 
@@ -4878,6 +4878,7 @@ dependencies = [
  "calloop",
  "calloop-wayland-source",
  "cbindgen",
+ "clipboard-win",
  "cocoa",
  "collections",
  "core-foundation",
@@ -4906,7 +4907,6 @@ dependencies = [
  "num_cpus",
  "objc",
  "oo7",
- "open",
  "parking",
  "parking_lot",
  "pathfinder_geometry",
@@ -5069,7 +5069,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "client",
- "extension",
  "fs",
  "futures 0.3.28",
  "gpui",
@@ -5720,25 +5719,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28b29a3cd74f0f4598934efe3aeba42bae0eb4680554128851ebbecb02af14e6"
 
 [[package]]
-name = "is-docker"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "928bae27f42bc99b60d9ac7334e3a21d10ad8f1835a4e12ec3ec0464765ed1b3"
-dependencies = [
- "once_cell",
-]
-
-[[package]]
-name = "is-wsl"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "173609498df190136aa7dea1a91db051746d339e18476eed5ca40521f02d7aa5"
-dependencies = [
- "is-docker",
- "once_cell",
-]
-
-[[package]]
 name = "isahc"
 version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6082,6 +6062,12 @@ dependencies = [
  "util",
  "workspace",
 ]
+
+[[package]]
+name = "lazy-bytes-cast"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10257499f089cd156ad82d0a9cd57d9501fa2c989068992a97eb3c27836f206b"
 
 [[package]]
 name = "lazy_static"
@@ -7221,17 +7207,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
-name = "open"
-version = "5.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61a877bf6abd716642a53ef1b89fb498923a4afca5c754f9050b4d081c05c4b3"
-dependencies = [
- "is-wsl",
- "libc",
- "pathdiff",
-]
-
-[[package]]
 name = "open_ai"
 version = "0.1.0"
 dependencies = [
@@ -8078,7 +8053,6 @@ dependencies = [
  "serde_json",
  "settings",
  "sha2 0.10.7",
- "shellexpand 2.1.2",
  "shlex",
  "similar",
  "smol",
@@ -8220,7 +8194,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "collections",
- "futures 0.3.28",
  "prost",
  "prost-build",
  "serde",
@@ -8312,13 +8285,10 @@ dependencies = [
  "assistant",
  "editor",
  "gpui",
- "repl",
  "search",
  "settings",
  "ui",
- "util",
  "workspace",
- "zed_actions",
 ]
 
 [[package]]
@@ -8703,7 +8673,6 @@ dependencies = [
  "image",
  "language",
  "log",
- "multi_buffer",
  "project",
  "runtimelib",
  "schemars",
@@ -10776,7 +10745,6 @@ dependencies = [
  "gpui",
  "libc",
  "rand 0.8.5",
- "release_channel",
  "schemars",
  "serde",
  "serde_derive",
@@ -13337,7 +13305,6 @@ dependencies = [
  "derive_more",
  "dev_server_projects",
  "env_logger",
- "file_icons",
  "fs",
  "futures 0.3.28",
  "gpui",
@@ -13629,7 +13596,7 @@ dependencies = [
 
 [[package]]
 name = "zed"
-version = "0.145.0"
+version = "0.144.2"
 dependencies = [
  "activity_indicator",
  "anyhow",
@@ -13757,7 +13724,7 @@ dependencies = [
 
 [[package]]
 name = "zed_dart"
-version = "0.0.3"
+version = "0.0.2"
 dependencies = [
  "zed_extension_api 0.0.6",
 ]
@@ -13907,7 +13874,7 @@ dependencies = [
 
 [[package]]
 name = "zed_svelte"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "zed_extension_api 0.0.6",
 ]

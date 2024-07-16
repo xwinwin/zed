@@ -39,10 +39,8 @@ pub mod tasks;
 
 #[cfg(test)]
 mod editor_tests;
-mod signature_help;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test;
-
 use ::git::diff::{DiffHunk, DiffHunkStatus};
 use ::git::{parse_git_remote_url, BuildPermalinkParams, GitHostingProviderRegistry};
 pub(crate) use actions::*;
@@ -68,12 +66,12 @@ use git::diff_hunk_to_display;
 use gpui::{
     div, impl_actions, point, prelude::*, px, relative, size, uniform_list, Action, AnyElement,
     AppContext, AsyncWindowContext, AvailableSpace, BackgroundExecutor, Bounds, ClipboardItem,
-    Context, DispatchPhase, ElementId, EntityId, EventEmitter, FocusHandle, FocusOutEvent,
-    FocusableView, FontId, FontStyle, FontWeight, HighlightStyle, Hsla, InteractiveText,
-    KeyContext, ListSizingBehavior, Model, MouseButton, PaintQuad, ParentElement, Pixels, Render,
-    SharedString, Size, StrikethroughStyle, Styled, StyledText, Subscription, Task, TextStyle,
-    UnderlineStyle, UniformListScrollHandle, View, ViewContext, ViewInputHandler, VisualContext,
-    WeakFocusHandle, WeakView, WhiteSpace, WindowContext,
+    Context, DispatchPhase, ElementId, EventEmitter, FocusHandle, FocusOutEvent, FocusableView,
+    FontId, FontStyle, FontWeight, HighlightStyle, Hsla, InteractiveText, KeyContext,
+    ListSizingBehavior, Model, MouseButton, PaintQuad, ParentElement, Pixels, Render, SharedString,
+    Size, StrikethroughStyle, Styled, StyledText, Subscription, Task, TextStyle, UnderlineStyle,
+    UniformListScrollHandle, View, ViewContext, ViewInputHandler, VisualContext, WeakFocusHandle,
+    WeakView, WhiteSpace, WindowContext,
 };
 use highlight_matching_bracket::refresh_matching_bracket_highlights;
 use hover_popover::{hide_hover, HoverState};
@@ -156,7 +154,6 @@ use workspace::{
 use workspace::{OpenInTerminal, OpenTerminal, TabBarSettings, Toast};
 
 use crate::hover_links::find_url;
-use crate::signature_help::{SignatureHelpHiddenBy, SignatureHelpState};
 
 pub const FILE_HEADER_HEIGHT: u8 = 1;
 pub const MULTI_BUFFER_EXCERPT_HEADER_HEIGHT: u8 = 1;
@@ -271,7 +268,7 @@ pub fn init(cx: &mut AppContext) {
     init_settings(cx);
 
     workspace::register_project_item::<Editor>(cx);
-    workspace::FollowableViewRegistry::register::<Editor>(cx);
+    workspace::register_followable_item::<Editor>(cx);
     workspace::register_deserializable_item::<Editor>(cx);
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
@@ -504,8 +501,6 @@ pub struct Editor {
     context_menu: RwLock<Option<ContextMenu>>,
     mouse_context_menu: Option<MouseContextMenu>,
     completion_tasks: Vec<(CompletionId, Task<Option<()>>)>,
-    signature_help_state: SignatureHelpState,
-    auto_signature_help: Option<bool>,
     find_all_references_task_sources: Vec<Anchor>,
     next_completion_id: CompletionId,
     completion_documentation_pre_resolve_debounce: DebouncedDelay,
@@ -1824,8 +1819,6 @@ impl Editor {
             context_menu: RwLock::new(None),
             mouse_context_menu: None,
             completion_tasks: Default::default(),
-            signature_help_state: SignatureHelpState::default(),
-            auto_signature_help: None,
             find_all_references_task_sources: Vec::new(),
             next_completion_id: 0,
             completion_documentation_pre_resolve_debounce: DebouncedDelay::new(),
@@ -2163,10 +2156,6 @@ impl Editor {
 
     pub fn set_cursor_shape(&mut self, cursor_shape: CursorShape, cx: &mut ViewContext<Self>) {
         self.cursor_shape = cursor_shape;
-
-        // Disrupt blink for immediate user feedback that the cursor shape has changed
-        self.blink_manager.update(cx, BlinkManager::show_cursor);
-
         cx.notify();
     }
 
@@ -2422,15 +2411,6 @@ impl Editor {
                 self.request_autoscroll(autoscroll, cx);
             }
             self.selections_did_change(true, &old_cursor_position, request_completions, cx);
-
-            if self.should_open_signature_help_automatically(
-                &old_cursor_position,
-                self.signature_help_state.backspace_pressed(),
-                cx,
-            ) {
-                self.show_signature_help(&ShowSignatureHelp, cx);
-            }
-            self.signature_help_state.set_backspace_pressed(false);
         }
 
         result
@@ -2886,10 +2866,6 @@ impl Editor {
             return true;
         }
 
-        if self.hide_signature_help(cx, SignatureHelpHiddenBy::Escape) {
-            return true;
-        }
-
         if self.hide_context_menu(cx).is_some() {
             return true;
         }
@@ -2966,7 +2942,7 @@ impl Editor {
         }
 
         let selections = self.selections.all_adjusted(cx);
-        let mut bracket_inserted = false;
+        let mut brace_inserted = false;
         let mut edits = Vec::new();
         let mut linked_edits = HashMap::<_, Vec<_>>::default();
         let mut new_selections = Vec::with_capacity(selections.len());
@@ -3028,7 +3004,6 @@ impl Editor {
                                         ),
                                         &bracket_pair.start[..prefix_len],
                                     ));
-
                             if autoclose
                                 && bracket_pair.close
                                 && following_text_allows_autoclose
@@ -3046,7 +3021,7 @@ impl Editor {
                                     selection.range(),
                                     format!("{}{}", text, bracket_pair.end).into(),
                                 ));
-                                bracket_inserted = true;
+                                brace_inserted = true;
                                 continue;
                             }
                         }
@@ -3092,7 +3067,7 @@ impl Editor {
                             selection.end..selection.end,
                             bracket_pair.end.as_str().into(),
                         ));
-                        bracket_inserted = true;
+                        brace_inserted = true;
                         new_selections.push((
                             Selection {
                                 id: selection.id,
@@ -3249,20 +3224,12 @@ impl Editor {
                 s.select(new_selections)
             });
 
-            if !bracket_inserted && EditorSettings::get_global(cx).use_on_type_format {
+            if !brace_inserted && EditorSettings::get_global(cx).use_on_type_format {
                 if let Some(on_type_format_task) =
                     this.trigger_on_type_formatting(text.to_string(), cx)
                 {
                     on_type_format_task.detach_and_log_err(cx);
                 }
-            }
-
-            let editor_settings = EditorSettings::get_global(cx);
-            if bracket_inserted
-                && (editor_settings.auto_signature_help
-                    || editor_settings.show_signature_help_after_edits)
-            {
-                this.show_signature_help(&ShowSignatureHelp, cx);
             }
 
             let trigger_in_words = !had_active_inline_completion;
@@ -4338,14 +4305,6 @@ impl Editor {
             true,
             cx,
         );
-
-        let editor_settings = EditorSettings::get_global(cx);
-        if editor_settings.show_signature_help_after_edits || editor_settings.auto_signature_help {
-            // After the code completion is finished, users often want to know what signatures are needed.
-            // so we should automatically call signature_help
-            self.show_signature_help(&ShowSignatureHelp, cx);
-        }
-
         Some(cx.foreground_executor().spawn(async move {
             apply_edits.await?;
             Ok(())
@@ -5369,7 +5328,6 @@ impl Editor {
                 }
             }
 
-            this.signature_help_state.set_backspace_pressed(true);
             this.change_selections(Some(Autoscroll::fit()), cx, |s| s.select(selections));
             this.insert("", cx);
             let empty_str: Arc<str> = Arc::from("");
@@ -8529,7 +8487,7 @@ impl Editor {
     ) -> Vec<(TaskSourceKind, TaskTemplate)> {
         let (inventory, worktree_id, file) = project.read_with(cx, |project, cx| {
             let (worktree_id, file) = project
-                .buffer_for_id(runnable.buffer, cx)
+                .buffer_for_id(runnable.buffer)
                 .and_then(|buffer| buffer.read(cx).file())
                 .map(|file| (WorktreeId::from_usize(file.worktree_id()), file.clone()))
                 .unzip();
@@ -9762,7 +9720,7 @@ impl Editor {
                         *block_id,
                         (
                             None,
-                            diagnostic_block_renderer(diagnostic.clone(), None, true, is_valid),
+                            diagnostic_block_renderer(diagnostic.clone(), is_valid),
                         ),
                     );
                 }
@@ -9815,7 +9773,7 @@ impl Editor {
                             style: BlockStyle::Fixed,
                             position: buffer.anchor_after(entry.range.start),
                             height: message_height,
-                            render: diagnostic_block_renderer(diagnostic, None, true, true),
+                            render: diagnostic_block_renderer(diagnostic, true),
                             disposition: BlockDisposition::Below,
                         }
                     }),
@@ -11135,7 +11093,6 @@ impl Editor {
                 if *singleton_buffer_edited {
                     if let Some(project) = &self.project {
                         let project = project.read(cx);
-                        #[allow(clippy::mutable_key_type)]
                         let languages_affected = multibuffer
                             .read(cx)
                             .all_buffers()
@@ -11646,11 +11603,8 @@ impl Editor {
         if let Some(blame) = self.blame.as_ref() {
             blame.update(cx, GitBlame::blur)
         }
-        if !self.hover_state.focused(cx) {
-            hide_hover(self, cx);
-        }
-
         self.hide_context_menu(cx);
+        hide_hover(self, cx);
         cx.emit(EditorEvent::Blurred);
         cx.notify();
     }
@@ -12684,17 +12638,11 @@ impl InvalidationRegion for SnippetState {
     }
 }
 
-pub fn diagnostic_block_renderer(
-    diagnostic: Diagnostic,
-    max_message_rows: Option<u8>,
-    allow_closing: bool,
-    _is_valid: bool,
-) -> RenderBlock {
-    let (text_without_backticks, code_ranges) =
-        highlight_diagnostic_message(&diagnostic, max_message_rows);
+pub fn diagnostic_block_renderer(diagnostic: Diagnostic, _is_valid: bool) -> RenderBlock {
+    let (text_without_backticks, code_ranges) = highlight_diagnostic_message(&diagnostic);
 
     Box::new(move |cx: &mut BlockContext| {
-        let group_id: SharedString = cx.transform_block_id.to_string().into();
+        let group_id: SharedString = cx.block_id.to_string().into();
 
         let mut text_style = cx.text_style().clone();
         text_style.color = diagnostic_style(diagnostic.severity, cx.theme().status());
@@ -12706,25 +12654,23 @@ pub fn diagnostic_block_renderer(
 
         let multi_line_diagnostic = diagnostic.message.contains('\n');
 
-        let buttons = |diagnostic: &Diagnostic, block_id: TransformBlockId| {
+        let buttons = |diagnostic: &Diagnostic, block_id: usize| {
             if multi_line_diagnostic {
                 v_flex()
             } else {
                 h_flex()
             }
-            .when(allow_closing, |div| {
-                div.children(diagnostic.is_primary.then(|| {
-                    IconButton::new(("close-block", EntityId::from(block_id)), IconName::XCircle)
-                        .icon_color(Color::Muted)
-                        .size(ButtonSize::Compact)
-                        .style(ButtonStyle::Transparent)
-                        .visible_on_hover(group_id.clone())
-                        .on_click(move |_click, cx| cx.dispatch_action(Box::new(Cancel)))
-                        .tooltip(|cx| Tooltip::for_action("Close Diagnostics", &Cancel, cx))
-                }))
-            })
+            .children(diagnostic.is_primary.then(|| {
+                IconButton::new(("close-block", block_id), IconName::XCircle)
+                    .icon_color(Color::Muted)
+                    .size(ButtonSize::Compact)
+                    .style(ButtonStyle::Transparent)
+                    .visible_on_hover(group_id.clone())
+                    .on_click(move |_click, cx| cx.dispatch_action(Box::new(Cancel)))
+                    .tooltip(|cx| Tooltip::for_action("Close Diagnostics", &Cancel, cx))
+            }))
             .child(
-                IconButton::new(("copy-block", EntityId::from(block_id)), IconName::Copy)
+                IconButton::new(("copy-block", block_id), IconName::Copy)
                     .icon_color(Color::Muted)
                     .size(ButtonSize::Compact)
                     .style(ButtonStyle::Transparent)
@@ -12737,12 +12683,12 @@ pub fn diagnostic_block_renderer(
             )
         };
 
-        let icon_size = buttons(&diagnostic, cx.transform_block_id)
+        let icon_size = buttons(&diagnostic, cx.block_id)
             .into_any_element()
             .layout_as_root(AvailableSpace::min_size(), cx);
 
         h_flex()
-            .id(cx.transform_block_id)
+            .id(cx.block_id)
             .group(group_id.clone())
             .relative()
             .size_full()
@@ -12754,7 +12700,7 @@ pub fn diagnostic_block_renderer(
                     .w(cx.anchor_x - cx.gutter_dimensions.width - icon_size.width)
                     .flex_shrink(),
             )
-            .child(buttons(&diagnostic, cx.transform_block_id))
+            .child(buttons(&diagnostic, cx.block_id))
             .child(div().flex().flex_shrink_0().child(
                 StyledText::new(text_without_backticks.clone()).with_highlights(
                     &text_style,
@@ -12773,10 +12719,7 @@ pub fn diagnostic_block_renderer(
     })
 }
 
-pub fn highlight_diagnostic_message(
-    diagnostic: &Diagnostic,
-    mut max_message_rows: Option<u8>,
-) -> (SharedString, Vec<Range<usize>>) {
+pub fn highlight_diagnostic_message(diagnostic: &Diagnostic) -> (SharedString, Vec<Range<usize>>) {
     let mut text_without_backticks = String::new();
     let mut code_ranges = Vec::new();
 
@@ -12788,45 +12731,18 @@ pub fn highlight_diagnostic_message(
 
     let mut prev_offset = 0;
     let mut in_code_block = false;
-    let mut newline_indices = diagnostic
-        .message
-        .match_indices('\n')
-        .map(|(ix, _)| ix)
-        .fuse()
-        .peekable();
     for (ix, _) in diagnostic
         .message
         .match_indices('`')
         .chain([(diagnostic.message.len(), "")])
     {
-        let mut trimmed_ix = ix;
-        while let Some(newline_index) = newline_indices.peek() {
-            if *newline_index < ix {
-                if let Some(rows_left) = &mut max_message_rows {
-                    if *rows_left == 0 {
-                        trimmed_ix = newline_index.saturating_sub(1);
-                        break;
-                    } else {
-                        *rows_left -= 1;
-                    }
-                }
-                let _ = newline_indices.next();
-            } else {
-                break;
-            }
-        }
         let prev_len = text_without_backticks.len();
-        let new_text = &diagnostic.message[prev_offset..trimmed_ix];
-        text_without_backticks.push_str(new_text);
+        text_without_backticks.push_str(&diagnostic.message[prev_offset..ix]);
+        prev_offset = ix + 1;
         if in_code_block {
             code_ranges.push(prev_len..text_without_backticks.len());
         }
-        prev_offset = trimmed_ix + 1;
         in_code_block = !in_code_block;
-        if trimmed_ix != ix {
-            text_without_backticks.push_str("...");
-            break;
-        }
     }
 
     (text_without_backticks.into(), code_ranges)

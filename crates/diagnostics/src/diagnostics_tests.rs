@@ -973,8 +973,8 @@ fn editor_blocks(
             blocks.extend(
                 snapshot
                     .blocks_in_range(DisplayRow(0)..snapshot.max_point().row())
-                    .filter_map(|(row, block)| {
-                        let transform_block_id = block.id();
+                    .enumerate()
+                    .filter_map(|(ix, (row, block))| {
                         let name: SharedString = match block {
                             TransformBlock::Custom(block) => {
                                 let mut element = block.render(&mut BlockContext {
@@ -984,7 +984,7 @@ fn editor_blocks(
                                     line_height: px(0.),
                                     em_width: px(0.),
                                     max_width: px(0.),
-                                    transform_block_id,
+                                    block_id: ix,
                                     editor_style: &editor::EditorStyle::default(),
                                 });
                                 let element = element.downcast_mut::<Stateful<Div>>().unwrap();

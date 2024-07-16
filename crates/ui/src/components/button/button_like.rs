@@ -370,14 +370,6 @@ impl ButtonLike {
         }
     }
 
-    pub fn new_rounded_left(id: impl Into<ElementId>) -> Self {
-        Self::new(id).rounding(ButtonLikeRounding::Left)
-    }
-
-    pub fn new_rounded_right(id: impl Into<ElementId>) -> Self {
-        Self::new(id).rounding(ButtonLikeRounding::Right)
-    }
-
     pub(crate) fn height(mut self, height: DefiniteLength) -> Self {
         self.height = Some(height);
         self

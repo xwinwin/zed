@@ -168,11 +168,7 @@ impl TitleBar {
                                     cx.listener(move |this, _, cx| {
                                         this.workspace
                                             .update(cx, |workspace, cx| {
-                                                if is_following {
-                                                    workspace.unfollow(peer_id, cx);
-                                                } else {
-                                                    workspace.follow(peer_id, cx);
-                                                }
+                                                workspace.follow(peer_id, cx);
                                             })
                                             .ok();
                                     })

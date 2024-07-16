@@ -11,11 +11,7 @@ mod session;
 mod stdio;
 
 pub use jupyter_settings::JupyterSettings;
-pub use kernels::{Kernel, KernelSpecification};
-pub use runtime_panel::{ClearOutputs, Interrupt, Run, Shutdown};
-pub use runtime_panel::{RuntimePanel, SessionSupport};
-pub use runtimelib::ExecutionState;
-pub use session::Session;
+pub use runtime_panel::RuntimePanel;
 
 fn zed_dispatcher(cx: &mut AppContext) -> impl Dispatcher {
     struct ZedDispatcher {

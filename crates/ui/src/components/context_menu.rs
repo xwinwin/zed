@@ -178,7 +178,7 @@ impl ContextMenu {
 
             action: Some(action.boxed_clone()),
             handler: Rc::new(move |_, cx| cx.dispatch_action(action.boxed_clone())),
-            icon: Some(IconName::ArrowUpRight),
+            icon: Some(IconName::Link),
         });
         self
     }
@@ -360,7 +360,7 @@ impl Render for ContextMenu {
                                         h_flex()
                                             .gap_1()
                                             .child(Label::new(label.clone()))
-                                            .child(Icon::new(*icon).size(IconSize::Small))
+                                            .child(Icon::new(*icon))
                                             .into_any_element()
                                     } else {
                                         Label::new(label.clone()).into_any_element()

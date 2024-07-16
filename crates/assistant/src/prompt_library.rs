@@ -3,6 +3,7 @@ use crate::{
     InlineAssist, InlineAssistant, LanguageModelRequest, LanguageModelRequestMessage, Role,
 };
 use anyhow::{anyhow, Result};
+use assistant_slash_command::SlashCommandRegistry;
 use chrono::{DateTime, Utc};
 use collections::{HashMap, HashSet};
 use editor::{actions::Tab, CurrentLineHighlight, Editor, EditorElement, EditorEvent, EditorStyle};
@@ -268,7 +269,7 @@ impl PickerDelegate for PromptPickerDelegate {
             .flex_none()
             .py_1()
             .px_2()
-            .mx_1()
+            .mx_2()
             .child(editor.clone())
     }
 }
@@ -447,6 +448,7 @@ impl PromptLibrary {
             self.set_active_prompt(Some(prompt_id), cx);
         } else if let Some(prompt_metadata) = self.store.metadata(prompt_id) {
             let language_registry = self.language_registry.clone();
+            let commands = SlashCommandRegistry::global(cx);
             let prompt = self.store.load(prompt_id);
             self.pending_load = cx.spawn(|this, mut cx| async move {
                 let prompt = prompt.await;
@@ -475,7 +477,7 @@ impl PromptLibrary {
                             editor.set_use_modal_editing(false);
                             editor.set_current_line_highlight(Some(CurrentLineHighlight::None));
                             editor.set_completion_provider(Box::new(
-                                SlashCommandCompletionProvider::new(None, None),
+                                SlashCommandCompletionProvider::new(commands, None, None),
                             ));
                             if focus {
                                 editor.focus(cx);
@@ -766,7 +768,6 @@ impl PromptLibrary {
             .capture_action(cx.listener(Self::focus_active_prompt))
             .bg(cx.theme().colors().panel_background)
             .h_full()
-            .px_1()
             .w_1_3()
             .overflow_x_hidden()
             .child(

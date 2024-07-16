@@ -19,6 +19,7 @@
       "escape": "menu::Cancel",
       "ctrl-escape": "menu::Cancel",
       "ctrl-c": "menu::Cancel",
+      "shift-enter": "picker::UseSelectedQuery",
       "alt-enter": ["picker::ConfirmInput", { "secondary": false }],
       "ctrl-alt-enter": ["picker::ConfirmInput", { "secondary": true }],
       "ctrl-shift-w": "workspace::CloseWindow",
@@ -99,7 +100,6 @@
       "ctrl-k ctrl-r": "editor::RevertSelectedHunks",
       "ctrl-'": "editor::ToggleHunkDiff",
       "ctrl-\"": "editor::ExpandAllHunkDiffs",
-      "ctrl-i": "editor::ShowSignatureHelp",
       "alt-g b": "editor::ToggleGitBlame"
     }
   },
@@ -326,7 +326,7 @@
       "alt-9": ["pane::ActivateItem", 8],
       "alt-0": "pane::ActivateLastItem",
       "ctrl-alt--": "pane::GoBack",
-      "ctrl-alt-_": "pane::GoForward",
+      "ctrl-alt-shift--": "pane::GoForward",
       "ctrl-shift-t": "pane::ReopenClosedItem",
       "f3": "search::SelectNextMatch",
       "shift-f3": "search::SelectPrevMatch",
@@ -564,13 +564,6 @@
     "context": "ChannelModal",
     "bindings": {
       "tab": "channel_modal::ToggleMode"
-    }
-  },
-  {
-    "context": "Picker > Editor",
-    "bindings": {
-      "tab": "picker::ConfirmCompletion",
-      "alt-enter": ["picker::ConfirmInput", { "secondary": false }]
     }
   },
   {

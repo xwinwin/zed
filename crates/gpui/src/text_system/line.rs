@@ -109,13 +109,7 @@ fn paint_line(
     wrap_boundaries: &[WrapBoundary],
     cx: &mut WindowContext,
 ) -> Result<()> {
-    let line_bounds = Bounds::new(
-        origin,
-        size(
-            layout.width,
-            line_height * (wrap_boundaries.len() as f32 + 1.),
-        ),
-    );
+    let line_bounds = Bounds::new(origin, size(layout.width, line_height));
     cx.paint_layer(line_bounds, |cx| {
         let padding_top = (line_height - layout.ascent - layout.descent) / 2.;
         let baseline_offset = point(px(0.), padding_top + layout.ascent);

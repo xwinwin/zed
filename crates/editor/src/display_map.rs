@@ -30,7 +30,6 @@ use crate::{
 pub use block_map::{
     BlockBufferRows, BlockChunks as DisplayChunks, BlockContext, BlockDisposition, BlockId,
     BlockMap, BlockPoint, BlockProperties, BlockStyle, RenderBlock, TransformBlock,
-    TransformBlockId,
 };
 use block_map::{BlockRow, BlockSnapshot};
 use collections::{HashMap, HashSet};

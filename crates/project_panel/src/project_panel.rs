@@ -2171,22 +2171,24 @@ impl ProjectPanel {
                                     });
                                 }
                             } else if event.down.modifiers.secondary() {
-                                if event.down.click_count > 1 {
-                                    this.split_entry(entry_id, cx);
-                                } else if !this.marked_entries.insert(selection) {
+                                if !this.marked_entries.insert(selection) {
                                     this.marked_entries.remove(&selection);
                                 }
                             } else if kind.is_dir() {
                                 this.toggle_expanded(entry_id, cx);
                             } else {
                                 let click_count = event.up.click_count;
-                                this.open_entry(
-                                    entry_id,
-                                    cx.modifiers().secondary(),
-                                    click_count > 1,
-                                    click_count == 1,
-                                    cx,
-                                );
+                                if click_count > 1 && event.down.modifiers.secondary() {
+                                    this.split_entry(entry_id, cx);
+                                } else {
+                                    this.open_entry(
+                                        entry_id,
+                                        cx.modifiers().secondary(),
+                                        click_count > 1,
+                                        click_count == 1,
+                                        cx,
+                                    );
+                                }
                             }
                         }
                     }))
@@ -2291,7 +2293,7 @@ impl ProjectPanel {
                 .right_0()
                 .top_0()
                 .bottom_0()
-                .w(px(12.))
+                .w_3()
                 .cursor_default()
                 .child(ProjectPanelScrollbar::new(
                     percentage as f32..end_offset as f32,

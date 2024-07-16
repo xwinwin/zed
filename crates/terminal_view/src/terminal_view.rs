@@ -864,13 +864,10 @@ impl TerminalView {
         self.pause_cursor_blinking(cx);
 
         self.terminal.update(cx, |term, cx| {
-            let handled = term.try_keystroke(
+            term.try_keystroke(
                 &event.keystroke,
                 TerminalSettings::get_global(cx).option_as_meta,
-            );
-            if handled {
-                cx.stop_propagation();
-            }
+            )
         });
     }
 

@@ -180,7 +180,6 @@ impl Project {
             settings.max_scroll_history_lines,
             window,
             completion_tx,
-            cx,
         )
         .map(|builder| {
             let terminal_handle = cx.new_model(|cx| builder.subscribe(cx));

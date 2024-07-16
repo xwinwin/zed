@@ -462,7 +462,7 @@ impl PickerDelegate for TasksModalDelegate {
         )
     }
 
-    fn confirm_completion(&self, _: String) -> Option<String> {
+    fn selected_as_query(&self) -> Option<String> {
         let task_index = self.matches.get(self.selected_index())?.candidate_id;
         let tasks = self.candidates.as_ref()?;
         let (_, task) = tasks.get(task_index)?;
@@ -491,7 +491,11 @@ impl PickerDelegate for TasksModalDelegate {
     fn render_footer(&self, cx: &mut ViewContext<Picker<Self>>) -> Option<gpui::AnyElement> {
         let is_recent_selected = self.divider_index >= Some(self.selected_index);
         let current_modifiers = cx.modifiers();
-        let left_button = if self
+        let left_button = if is_recent_selected {
+            Some(("Edit task", picker::UseSelectedQuery.boxed_clone()))
+        } else if !self.matches.is_empty() {
+            Some(("Edit template", picker::UseSelectedQuery.boxed_clone()))
+        } else if self
             .project
             .read(cx)
             .task_inventory()
@@ -659,7 +663,7 @@ mod tests {
             "Only one task should match the query {query_str}"
         );
 
-        cx.dispatch_action(picker::ConfirmCompletion);
+        cx.dispatch_action(picker::UseSelectedQuery);
         assert_eq!(
             query(&tasks_picker, cx),
             "echo 4",
@@ -706,7 +710,7 @@ mod tests {
             "Last recently used one show task should be listed first"
         );
 
-        cx.dispatch_action(picker::ConfirmCompletion);
+        cx.dispatch_action(picker::UseSelectedQuery);
         assert_eq!(
             query(&tasks_picker, cx),
             query_str,
