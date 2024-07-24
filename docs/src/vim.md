@@ -299,13 +299,13 @@ Subword motion is not enabled by default. To enable it, add these bindings to yo
   },
 ```
 
-Surrounding the selection in visual mode is also not enabled by default (`shift-s` normally behaves like `c`). To enable it, add the following to your keymap.
+Surrounding the selection in visual mode is also not enabled by default (`shift-s` / `S` normally behaves like `c`). To enable it, add the following to your keymap.
 
 ```json
   {
     "context": "vim_mode == visual",
     "bindings": {
-      "shift-s": [
+      "S": [
         "vim::PushOperator",
         {
           "AddSurrounds": {}
