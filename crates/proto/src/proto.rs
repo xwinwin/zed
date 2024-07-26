@@ -18,7 +18,7 @@ use std::{
     fmt::{self, Debug},
     iter, mem,
     sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 include!(concat!(env!("OUT_DIR"), "/zed.messages.rs"));
@@ -102,10 +102,6 @@ impl AnyProtoClient {
     pub fn send<T: EnvelopedMessage>(&self, request: T) -> anyhow::Result<()> {
         let envelope = request.into_envelope(0, None, None);
         self.0.send(envelope)
-    }
-
-    pub fn send_dynamic(&self, message: Envelope) -> anyhow::Result<()> {
-        self.0.send(message)
     }
 }
 
@@ -399,8 +395,6 @@ messages!(
     (UpdateContext, Foreground),
     (SynchronizeContexts, Foreground),
     (SynchronizeContextsResponse, Foreground),
-    (AddWorktree, Foreground),
-    (AddWorktreeResponse, Foreground),
 );
 
 request_messages!(
@@ -518,7 +512,6 @@ request_messages!(
     (RestartLanguageServers, Ack),
     (OpenContext, OpenContextResponse),
     (SynchronizeContexts, SynchronizeContextsResponse),
-    (AddWorktree, AddWorktreeResponse),
 );
 
 entity_messages!(

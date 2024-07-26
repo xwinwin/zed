@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use gpui::{percentage, Animation, AnimationExt, AnyElement, Transformation, View};
 use repl::{
-    ExecutionState, JupyterSettings, Kernel, KernelSpecification, KernelStatus, Session,
-    SessionSupport,
+    ExecutionState, JupyterSettings, Kernel, KernelSpecification, KernelStatus, RuntimePanel,
+    Session, SessionSupport,
 };
 use ui::{
     prelude::*, ButtonLike, ContextMenu, IconWithIndicator, Indicator, IntoElement, PopoverMenu,
@@ -39,7 +39,15 @@ impl QuickActionBar {
             return None;
         }
 
-        let editor = self.active_editor()?;
+        let workspace = self.workspace.upgrade()?.read(cx);
+
+        let (editor, repl_panel) = if let (Some(editor), Some(repl_panel)) =
+            (self.active_editor(), workspace.panel::<RuntimePanel>(cx))
+        {
+            (editor, repl_panel)
+        } else {
+            return None;
+        };
 
         let has_nonempty_selection = {
             editor.update(cx, |this, cx| {
@@ -54,7 +62,10 @@ impl QuickActionBar {
             })
         };
 
-        let session = repl::session(editor.downgrade(), cx);
+        let session = repl_panel.update(cx, |repl_panel, cx| {
+            repl_panel.session(editor.downgrade(), cx)
+        });
+
         let session = match session {
             SessionSupport::ActiveSession(session) => session,
             SessionSupport::Inactive(spec) => {
@@ -73,44 +84,50 @@ impl QuickActionBar {
 
         let element_id = |suffix| ElementId::Name(format!("{}-{}", id, suffix).into());
 
-        let editor = editor.downgrade();
+        let panel_clone = repl_panel.clone();
+        let editor_clone = editor.downgrade();
         let dropdown_menu = PopoverMenu::new(element_id("menu"))
             .menu(move |cx| {
-                let editor = editor.clone();
+                let panel_clone = panel_clone.clone();
+                let editor_clone = editor_clone.clone();
                 let session = session.clone();
                 ContextMenu::build(cx, move |menu, cx| {
                     let menu_state = session_state(session, cx);
                     let status = menu_state.status;
-                    let editor = editor.clone();
+                    let editor_clone = editor_clone.clone();
+                    let panel_clone = panel_clone.clone();
 
-                    menu.map(|menu| {
-                        if status.is_connected() {
+                    menu.when_else(
+                        status.is_connected(),
+                        |running| {
                             let status = status.clone();
-                            menu.custom_row(move |_cx| {
-                                h_flex()
-                                    .child(
-                                        Label::new(format!(
-                                            "kernel: {} ({})",
-                                            menu_state.kernel_name.clone(),
-                                            menu_state.kernel_language.clone()
-                                        ))
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
-                                    )
-                                    .into_any_element()
-                            })
-                            .custom_row(move |_cx| {
-                                h_flex()
-                                    .child(
-                                        Label::new(status.clone().to_string())
+                            running
+                                .custom_row(move |_cx| {
+                                    h_flex()
+                                        .child(
+                                            Label::new(format!(
+                                                "kernel: {} ({})",
+                                                menu_state.kernel_name.clone(),
+                                                menu_state.kernel_language.clone()
+                                            ))
                                             .size(LabelSize::Small)
                                             .color(Color::Muted),
-                                    )
-                                    .into_any_element()
-                            })
-                        } else {
+                                        )
+                                        .into_any_element()
+                                })
+                                .custom_row(move |_cx| {
+                                    h_flex()
+                                        .child(
+                                            Label::new(status.clone().to_string())
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted),
+                                        )
+                                        .into_any_element()
+                                })
+                        },
+                        |not_running| {
                             let status = status.clone();
-                            menu.custom_row(move |_cx| {
+                            not_running.custom_row(move |_cx| {
                                 h_flex()
                                     .child(
                                         Label::new(format!("{}...", status.clone().to_string()))
@@ -119,9 +136,10 @@ impl QuickActionBar {
                                     )
                                     .into_any_element()
                             })
-                        }
-                    })
+                        },
+                    )
                     .separator()
+                    // Run
                     .custom_entry(
                         move |_cx| {
                             Label::new(if has_nonempty_selection {
@@ -132,12 +150,17 @@ impl QuickActionBar {
                             .into_any_element()
                         },
                         {
-                            let editor = editor.clone();
+                            let panel_clone = panel_clone.clone();
+                            let editor_clone = editor_clone.clone();
                             move |cx| {
-                                repl::run(editor.clone(), cx).log_err();
+                                let editor_clone = editor_clone.clone();
+                                panel_clone.update(cx, |this, cx| {
+                                    this.run(editor_clone.clone(), cx).log_err();
+                                });
                             }
                         },
                     )
+                    // Interrupt
                     .custom_entry(
                         move |_cx| {
                             Label::new("Interrupt")
@@ -146,12 +169,17 @@ impl QuickActionBar {
                                 .into_any_element()
                         },
                         {
-                            let editor = editor.clone();
+                            let panel_clone = panel_clone.clone();
+                            let editor_clone = editor_clone.clone();
                             move |cx| {
-                                repl::interrupt(editor.clone(), cx);
+                                let editor_clone = editor_clone.clone();
+                                panel_clone.update(cx, |this, cx| {
+                                    this.interrupt(editor_clone, cx);
+                                });
                             }
                         },
                     )
+                    // Clear Outputs
                     .custom_entry(
                         move |_cx| {
                             Label::new("Clear Outputs")
@@ -160,9 +188,13 @@ impl QuickActionBar {
                                 .into_any_element()
                         },
                         {
-                            let editor = editor.clone();
+                            let panel_clone = panel_clone.clone();
+                            let editor_clone = editor_clone.clone();
                             move |cx| {
-                                repl::clear_outputs(editor.clone(), cx);
+                                let editor_clone = editor_clone.clone();
+                                panel_clone.update(cx, |this, cx| {
+                                    this.clear_outputs(editor_clone, cx);
+                                });
                             }
                         },
                     )
@@ -175,6 +207,7 @@ impl QuickActionBar {
                     )
                     // TODO: Add Restart action
                     // .action("Restart", Box::new(gpui::NoAction))
+                    // Shut down kernel
                     .custom_entry(
                         move |_cx| {
                             Label::new("Shut Down Kernel")
@@ -183,14 +216,17 @@ impl QuickActionBar {
                                 .into_any_element()
                         },
                         {
-                            let editor = editor.clone();
+                            let panel_clone = panel_clone.clone();
+                            let editor_clone = editor_clone.clone();
                             move |cx| {
-                                repl::shutdown(editor.clone(), cx);
+                                let editor_clone = editor_clone.clone();
+                                panel_clone.update(cx, |this, cx| {
+                                    this.shutdown(editor_clone, cx);
+                                });
                             }
                         },
                     )
-                    .separator()
-                    .action("View Sessions", Box::new(repl::Sessions))
+                    // .separator()
                     // TODO: Add shut down all kernels action
                     // .action("Shut Down all Kernels", Box::new(gpui::NoAction))
                 })

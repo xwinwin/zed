@@ -13,9 +13,9 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use task::{Shell, SpawnInTerminal, TerminalWorkDir};
+use task::{SpawnInTerminal, TerminalWorkDir};
 use terminal::{
-    terminal_settings::{self, TerminalSettings, VenvSettingsContent},
+    terminal_settings::{self, Shell, TerminalSettings, VenvSettingsContent},
     TaskState, TaskStatus, Terminal, TerminalBuilder,
 };
 use util::ResultExt;
@@ -131,7 +131,6 @@ impl Project {
                         full_label: spawn_task.full_label,
                         label: spawn_task.label,
                         command_label: spawn_task.command_label,
-                        hide: spawn_task.hide,
                         status: TaskStatus::Running,
                         completion_rx,
                     }),
@@ -156,7 +155,6 @@ impl Project {
                             full_label: spawn_task.full_label,
                             label: spawn_task.label,
                             command_label: spawn_task.command_label,
-                            hide: spawn_task.hide,
                             status: TaskStatus::Running,
                             completion_rx,
                         }),

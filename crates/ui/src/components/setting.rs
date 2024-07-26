@@ -1,4 +1,4 @@
-use crate::{prelude::*, Checkbox, ContextMenu, ListHeader};
+use crate::{prelude::*, Checkbox, ListHeader};
 
 use super::DropdownMenu;
 
@@ -42,12 +42,12 @@ pub enum SettingType {
 }
 
 #[derive(Debug, Clone, IntoElement)]
-pub struct LegacySettingsGroup {
+pub struct SettingsGroup {
     pub name: String,
     settings: Vec<SettingsItem>,
 }
 
-impl LegacySettingsGroup {
+impl SettingsGroup {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -61,7 +61,7 @@ impl LegacySettingsGroup {
     }
 }
 
-impl RenderOnce for LegacySettingsGroup {
+impl RenderOnce for SettingsGroup {
     fn render(self, _cx: &mut WindowContext) -> impl IntoElement {
         let empty_message = format!("No settings available for {}", self.name);
 
@@ -207,7 +207,7 @@ impl RenderOnce for SettingsItem {
         let id: ElementId = self.id.clone().into();
 
         // When the setting is disabled or toggled off, we don't want any secondary elements to be interactable
-        let _secondary_element_disabled = self.disabled || self.toggled == Some(false);
+        let secondary_element_disabled = self.disabled || self.toggled == Some(false);
 
         let full_width = match self.layout {
             SettingLayout::FullLine | SettingLayout::FullLineJustified => true,
@@ -239,12 +239,10 @@ impl RenderOnce for SettingsItem {
             SettingType::Toggle(_) => None,
             SettingType::ToggleAnd(secondary_setting_type) => match secondary_setting_type {
                 SecondarySettingType::Dropdown => Some(
-                    DropdownMenu::new(
-                        id.clone(),
-                        current_string.unwrap_or_default(),
-                        ContextMenu::build(cx, |menu, _cx| menu),
-                    )
-                    .into_any_element(),
+                    DropdownMenu::new(id.clone(), &cx)
+                        .current_item(current_string)
+                        .disabled(secondary_element_disabled)
+                        .into_any_element(),
                 ),
             },
             SettingType::Input(input_type) => match input_type {
@@ -252,13 +250,10 @@ impl RenderOnce for SettingsItem {
                 InputType::Number => Some(div().child("number").into_any_element()),
             },
             SettingType::Dropdown => Some(
-                DropdownMenu::new(
-                    id.clone(),
-                    current_string.unwrap_or_default(),
-                    ContextMenu::build(cx, |menu, _cx| menu),
-                )
-                .full_width(true)
-                .into_any_element(),
+                DropdownMenu::new(id.clone(), &cx)
+                    .current_item(current_string)
+                    .full_width(true)
+                    .into_any_element(),
             ),
             SettingType::Range => Some(div().child("range").into_any_element()),
             SettingType::Unsupported => None,
@@ -313,12 +308,12 @@ impl RenderOnce for SettingsItem {
     }
 }
 
-pub struct LegacySettingsMenu {
+pub struct SettingsMenu {
     name: SharedString,
-    groups: Vec<LegacySettingsGroup>,
+    groups: Vec<SettingsGroup>,
 }
 
-impl LegacySettingsMenu {
+impl SettingsMenu {
     pub fn new(name: impl Into<SharedString>) -> Self {
         Self {
             name: name.into(),
@@ -326,13 +321,13 @@ impl LegacySettingsMenu {
         }
     }
 
-    pub fn add_group(mut self, group: LegacySettingsGroup) -> Self {
+    pub fn add_group(mut self, group: SettingsGroup) -> Self {
         self.groups.push(group);
         self
     }
 }
 
-impl Render for LegacySettingsMenu {
+impl Render for SettingsMenu {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let is_empty = self.groups.is_empty();
         v_flex()
@@ -342,13 +337,11 @@ impl Render for LegacySettingsMenu {
             .max_w_96()
             .max_h_2_3()
             .px_2()
-            .map(|el| {
-                if is_empty {
-                    el.py_1()
-                } else {
-                    el.pt_0().pb_1()
-                }
-            })
+            .when_else(
+                is_empty,
+                |empty| empty.py_1(),
+                |not_empty| not_empty.pt_0().pb_1(),
+            )
             .gap_1()
             .when(is_empty, |this| {
                 this.child(Label::new("No settings found").color(Color::Muted))

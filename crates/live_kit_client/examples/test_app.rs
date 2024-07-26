@@ -25,9 +25,9 @@ fn main() {
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
 
         cx.set_menus(vec![Menu {
-            name: "Zed".into(),
+            name: "Zed",
             items: vec![MenuItem::Action {
-                name: "Quit".into(),
+                name: "Quit",
                 action: Box::new(Quit),
                 os_action: None,
             }],

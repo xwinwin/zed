@@ -285,11 +285,6 @@ impl ContextMenu {
             cx.propagate()
         }
     }
-
-    pub fn on_blur_subscription(mut self, new_subscription: Subscription) -> Self {
-        self._on_blur_subscription = new_subscription;
-        self
-    }
 }
 
 impl ContextMenuItem {
@@ -311,10 +306,7 @@ impl Render for ContextMenu {
         div().occlude().elevation_2(cx).flex().flex_row().child(
             WithRemSize::new(ui_font_size).flex().child(
                 v_flex()
-                    .id("context-menu")
                     .min_w(px(200.))
-                    .max_h(vh(0.75, cx))
-                    .overflow_y_scroll()
                     .track_focus(&self.focus_handle)
                     .on_mouse_down_out(cx.listener(|this, _, cx| this.cancel(&menu::Cancel, cx)))
                     .key_context("menu")

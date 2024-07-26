@@ -1,16 +1,18 @@
-use crate::{Action, AppContext, Platform, SharedString};
+use std::borrow::Cow;
+
+use crate::{Action, AppContext, Platform};
 use util::ResultExt;
 
 /// A menu of the application, either a main menu or a submenu
-pub struct Menu {
+pub struct Menu<'a> {
     /// The name of the menu
-    pub name: SharedString,
+    pub name: &'a str,
 
     /// The items in the menu
-    pub items: Vec<MenuItem>,
+    pub items: Vec<MenuItem<'a>>,
 }
 
-impl Menu {
+impl<'a> Menu<'a> {
     /// Create an OwnedMenu from this Menu
     pub fn owned(self) -> OwnedMenu {
         OwnedMenu {
@@ -21,17 +23,17 @@ impl Menu {
 }
 
 /// The different kinds of items that can be in a menu
-pub enum MenuItem {
+pub enum MenuItem<'a> {
     /// A separator between items
     Separator,
 
     /// A submenu
-    Submenu(Menu),
+    Submenu(Menu<'a>),
 
     /// An action that can be performed
     Action {
         /// The name of this menu item
-        name: SharedString,
+        name: &'a str,
 
         /// the action to perform when this menu item is selected
         action: Box<dyn Action>,
@@ -42,34 +44,30 @@ pub enum MenuItem {
     },
 }
 
-impl MenuItem {
+impl<'a> MenuItem<'a> {
     /// Creates a new menu item that is a separator
     pub fn separator() -> Self {
         Self::Separator
     }
 
     /// Creates a new menu item that is a submenu
-    pub fn submenu(menu: Menu) -> Self {
+    pub fn submenu(menu: Menu<'a>) -> Self {
         Self::Submenu(menu)
     }
 
     /// Creates a new menu item that invokes an action
-    pub fn action(name: impl Into<SharedString>, action: impl Action) -> Self {
+    pub fn action(name: &'a str, action: impl Action) -> Self {
         Self::Action {
-            name: name.into(),
+            name,
             action: Box::new(action),
             os_action: None,
         }
     }
 
     /// Creates a new menu item that invokes an action and has an OS action
-    pub fn os_action(
-        name: impl Into<SharedString>,
-        action: impl Action,
-        os_action: OsAction,
-    ) -> Self {
+    pub fn os_action(name: &'a str, action: impl Action, os_action: OsAction) -> Self {
         Self::Action {
-            name: name.into(),
+            name,
             action: Box::new(action),
             os_action: Some(os_action),
         }
@@ -97,7 +95,7 @@ impl MenuItem {
 #[derive(Clone)]
 pub struct OwnedMenu {
     /// The name of the menu
-    pub name: SharedString,
+    pub name: Cow<'static, str>,
 
     /// The items in the menu
     pub items: Vec<OwnedMenuItem>,

@@ -82,7 +82,7 @@
   // Whether to confirm before quitting Zed.
   "confirm_quit": false,
   // Whether to restore last closed project when fresh Zed instance is opened.
-  "restore_on_startup": "last_session",
+  "restore_on_startup": "last_workspace",
   // Size of the drop target in the editor.
   "drop_target_size": 0.2,
   // Whether the window should be closed when using 'close active item' on a window with no tabs.
@@ -375,7 +375,7 @@
   },
   "assistant": {
     // Version of this setting.
-    "version": "2",
+    "version": "1",
     // Whether the assistant is enabled.
     "enabled": true,
     // Whether to show the assistant panel button in the status bar.
@@ -386,12 +386,18 @@
     "default_width": 640,
     // Default height when the assistant is docked to the bottom.
     "default_height": 320,
-    // The default model to use when creating new contexts.
-    "default_model": {
-      // The provider to use.
-      "provider": "openai",
-      // The model to use.
-      "model": "gpt-4o"
+    // AI provider.
+    "provider": {
+      "name": "openai",
+      // The default model to use when creating new contexts. This
+      // setting can take three values:
+      //
+      // 1. "gpt-3.5-turbo"
+      // 2. "gpt-4"
+      // 3. "gpt-4-turbo-preview"
+      // 4. "gpt-4o"
+      // 5. "gpt-4o-mini"
+      "default_model": "gpt-4o"
     }
   },
   // Whether the screen sharing icon is shown in the os status bar.
@@ -699,7 +705,7 @@
   //
   "file_types": {
     "JSON": ["flake.lock"],
-    "JSONC": ["**/.zed/**/*.json", "**/zed/**/*.json", "**/Zed/**/*.json", "tsconfig.json"]
+    "JSONC": ["**/.zed/**/*.json", "**/zed/**/*.json"]
   },
   // The extensions that Zed should automatically install on startup.
   //
@@ -736,9 +742,6 @@
     },
     "Elixir": {
       "language_servers": ["elixir-ls", "!next-ls", "!lexical", "..."]
-    },
-    "Erlang": {
-      "language_servers": ["erlang-ls", "!elp", "..."]
     },
     "Go": {
       "code_actions_on_format": {
@@ -796,7 +799,7 @@
       }
     },
     "Ruby": {
-      "language_servers": ["solargraph", "!ruby-lsp", "!rubocop", "..."]
+      "language_servers": ["solargraph", "!ruby-lsp", "..."]
     },
     "SCSS": {
       "prettier": {
@@ -808,9 +811,6 @@
         "allowed": true,
         "plugins": ["prettier-plugin-sql"]
       }
-    },
-    "Starlark": {
-      "language_servers": ["starpls", "!buck2-lsp", "..."]
     },
     "Svelte": {
       "prettier": {
@@ -852,18 +852,6 @@
       }
     }
   },
-  // Different settings for specific language models.
-  "language_models": {
-    "anthropic": {
-      "api_url": "https://api.anthropic.com"
-    },
-    "openai": {
-      "api_url": "https://api.openai.com/v1"
-    },
-    "ollama": {
-      "api_url": "http://localhost:11434"
-    }
-  },
   // Zed's Prettier integration settings.
   // Allows to enable/disable formatting with Prettier
   // and configure default Prettier, used when no project-level Prettier installation is found.
@@ -894,15 +882,6 @@
     //             "command": "clippy" // rust-analyzer.check.command (default: "check")
     //         }
     //     }
-    // }
-  },
-  // Jupyter settings
-  "jupyter": {
-    "enabled": true
-    // Specify the language name as the key and the kernel name as the value.
-    // "kernel_selections": {
-    //    "python": "conda-base"
-    //    "typescript": "deno"
     // }
   },
   // Vim settings
@@ -957,13 +936,5 @@
   // Examples:
   //   - "proxy": "socks5://localhost:10808"
   //   - "proxy": "http://127.0.0.1:10809"
-  "proxy": null,
-  // Set to configure aliases for the command palette.
-  // When typing a query which is a key of this object, the value will be used instead.
-  //
-  // Examples:
-  // {
-  //   "W": "workspace::Save"
-  // }
-  "command_aliases": {}
+  "proxy": null
 }

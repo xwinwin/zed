@@ -1,6 +1,6 @@
 use anyhow::{Context as _, Result};
 use futures::{future::BoxFuture, AsyncReadExt, FutureExt};
-use http_client::HttpClient;
+use http::HttpClient;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

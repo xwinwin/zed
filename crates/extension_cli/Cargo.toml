@@ -16,9 +16,8 @@ path = "src/main.rs"
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
 env_logger.workspace = true
-extension = { workspace = true, features = ["no-webrtc"] }
 fs.workspace = true
-http_client.workspace = true
+extension = { workspace = true, features = ["no-webrtc"] }
 language.workspace = true
 log.workspace = true
 rpc.workspace = true

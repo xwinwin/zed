@@ -39,8 +39,8 @@ use pty_info::PtyProcessInfo;
 use serde::{Deserialize, Serialize};
 use settings::Settings;
 use smol::channel::{Receiver, Sender};
-use task::{HideStrategy, Shell, TaskId};
-use terminal_settings::{AlternateScroll, TerminalBlink, TerminalSettings};
+use task::TaskId;
+use terminal_settings::{AlternateScroll, Shell, TerminalBlink, TerminalSettings};
 use theme::{ActiveTheme, Theme};
 use util::truncate_and_trailoff;
 
@@ -612,7 +612,6 @@ pub struct TaskState {
     pub command_label: String,
     pub status: TaskStatus,
     pub completion_rx: Receiver<()>,
-    pub hide: HideStrategy,
 }
 
 /// A status of the current terminal tab's task.
@@ -1568,43 +1567,32 @@ impl Terminal {
             }
         };
 
-        let (finished_successfully, task_line, command_line) = task_summary(task, error_code);
+        let (task_line, command_line) = task_summary(task, error_code);
         // SAFETY: the invocation happens on non `TaskStatus::Running` tasks, once,
         // after either `AlacTermEvent::Exit` or `AlacTermEvent::ChildExit` events that are spawned
         // when Zed task finishes and no more output is made.
         // After the task summary is output once, no more text is appended to the terminal.
         unsafe { append_text_to_term(&mut self.term.lock(), &[&task_line, &command_line]) };
-        match task.hide {
-            HideStrategy::Never => {}
-            HideStrategy::Always => {
-                cx.emit(Event::CloseTerminal);
-            }
-            HideStrategy::OnSuccess => {
-                if finished_successfully {
-                    cx.emit(Event::CloseTerminal);
-                }
-            }
-        }
     }
 }
 
 const TASK_DELIMITER: &str = "⏵ ";
-fn task_summary(task: &TaskState, error_code: Option<i32>) -> (bool, String, String) {
+fn task_summary(task: &TaskState, error_code: Option<i32>) -> (String, String) {
     let escaped_full_label = task.full_label.replace("\r\n", "\r").replace('\n', "\r");
-    let (success, task_line) = match error_code {
+    let task_line = match error_code {
         Some(0) => {
-            (true, format!("{TASK_DELIMITER}Task `{escaped_full_label}` finished successfully"))
+            format!("{TASK_DELIMITER}Task `{escaped_full_label}` finished successfully")
         }
         Some(error_code) => {
-            (false, format!("{TASK_DELIMITER}Task `{escaped_full_label}` finished with non-zero error code: {error_code}"))
+            format!("{TASK_DELIMITER}Task `{escaped_full_label}` finished with non-zero error code: {error_code}")
         }
         None => {
-            (false, format!("{TASK_DELIMITER}Task `{escaped_full_label}` finished"))
+            format!("{TASK_DELIMITER}Task `{escaped_full_label}` finished")
         }
     };
     let escaped_command_label = task.command_label.replace("\r\n", "\r").replace('\n', "\r");
     let command_line = format!("{TASK_DELIMITER}Command: '{escaped_command_label}'");
-    (success, task_line, command_line)
+    (task_line, command_line)
 }
 
 /// Appends a stringified task summary to the terminal, after its output.

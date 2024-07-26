@@ -1,5 +1,9 @@
-use gpui::{AnyView, DismissEvent, FocusHandle, ManagedView, Subscription, View};
-use ui::prelude::*;
+use gpui::{
+    div, prelude::*, px, AnyView, DismissEvent, FocusHandle, ManagedView, Render, Subscription,
+    View, ViewContext, WindowContext,
+};
+use theme::ActiveTheme as _;
+use ui::{h_flex, v_flex};
 
 pub enum DismissDecision {
     Dismiss(bool),

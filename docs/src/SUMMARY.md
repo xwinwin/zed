@@ -12,14 +12,12 @@
 
 - [Configuring Zed](./configuring-zed.md)
 - [Key bindings](./key-bindings.md)
-- [Snippets](./snippets.md)
 - [Themes](./themes.md)
 - [Vim](./vim.md)
 
 # Using Zed
 
-- [Multibuffers](./multibuffers.md)
-- [Language model integration](./language-model-integration.md)
+- [Assistant Panel](./assistant-panel.md)
 - [Channels](./channels.md)
 - [Collaboration](./collaboration.md)
 - [Git](./git.md)

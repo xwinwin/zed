@@ -1,7 +1,5 @@
 use super::{SerializedAxis, SerializedWindowBounds};
-use crate::{
-    item::ItemHandle, Member, Pane, PaneAxis, SerializableItemRegistry, Workspace, WorkspaceId,
-};
+use crate::{item::ItemHandle, ItemDeserializers, Member, Pane, PaneAxis, Workspace, WorkspaceId};
 use anyhow::{Context, Result};
 use async_recursion::async_recursion;
 use client::DevServerProjectId;
@@ -9,7 +7,7 @@ use db::sqlez::{
     bindable::{Bind, Column, StaticColumnCount},
     statement::Statement,
 };
-use gpui::{AsyncWindowContext, Model, View, WeakView};
+use gpui::{AsyncWindowContext, Model, Task, View, WeakView};
 use project::Project;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -47,6 +45,13 @@ impl LocalPaths {
     }
 }
 
+impl From<LocalPaths> for SerializedWorkspaceLocation {
+    fn from(local_paths: LocalPaths) -> Self {
+        let order = LocalPathsOrder::default_for_paths(&local_paths);
+        Self::Local(local_paths, order)
+    }
+}
+
 impl StaticColumnCount for LocalPaths {}
 impl Bind for &LocalPaths {
     fn bind(&self, statement: &Statement, start_index: i32) -> Result<i32> {
@@ -58,7 +63,6 @@ impl Column for LocalPaths {
     fn column(statement: &mut Statement, start_index: i32) -> Result<(Self, i32)> {
         let path_blob = statement.column_blob(start_index)?;
         let paths: Arc<Vec<PathBuf>> = if path_blob.is_empty() {
-            println!("path blog is empty");
             Default::default()
         } else {
             bincode::deserialize(path_blob).context("Bincode deserialization of paths failed")?
@@ -149,63 +153,6 @@ pub enum SerializedWorkspaceLocation {
     DevServer(SerializedDevServerProject),
 }
 
-impl SerializedWorkspaceLocation {
-    /// Create a new `SerializedWorkspaceLocation` from a list of local paths.
-    ///
-    /// The paths will be sorted and the order will be stored in the `LocalPathsOrder` struct.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::path::Path;
-    /// use zed_workspace::SerializedWorkspaceLocation;
-    ///
-    /// let location = SerializedWorkspaceLocation::from_local_paths(vec![
-    ///     Path::new("path/to/workspace1"),
-    ///     Path::new("path/to/workspace2"),
-    /// ]);
-    /// assert_eq!(location, SerializedWorkspaceLocation::Local(
-    ///    LocalPaths::new(vec![
-    ///         Path::new("path/to/workspace1"),
-    ///         Path::new("path/to/workspace2"),
-    ///    ]),
-    ///   LocalPathsOrder::new(vec![0, 1]),
-    /// ));
-    /// ```
-    ///
-    /// ```
-    /// use std::path::Path;
-    /// use zed_workspace::SerializedWorkspaceLocation;
-    ///
-    /// let location = SerializedWorkspaceLocation::from_local_paths(vec![
-    ///     Path::new("path/to/workspace2"),
-    ///     Path::new("path/to/workspace1"),
-    /// ]);
-    ///
-    /// assert_eq!(location, SerializedWorkspaceLocation::Local(
-    ///    LocalPaths::new(vec![
-    ///         Path::new("path/to/workspace1"),
-    ///         Path::new("path/to/workspace2"),
-    ///   ]),
-    ///  LocalPathsOrder::new(vec![1, 0]),
-    /// ));
-    /// ```
-    pub fn from_local_paths<P: AsRef<Path>>(paths: impl IntoIterator<Item = P>) -> Self {
-        let mut indexed_paths: Vec<_> = paths
-            .into_iter()
-            .map(|p| p.as_ref().to_path_buf())
-            .enumerate()
-            .collect();
-
-        indexed_paths.sort_by(|(_, a), (_, b)| a.cmp(b));
-
-        let sorted_paths: Vec<_> = indexed_paths.iter().map(|(_, path)| path.clone()).collect();
-        let order: Vec<_> = indexed_paths.iter().map(|(index, _)| *index).collect();
-
-        Self::Local(LocalPaths::new(sorted_paths), LocalPathsOrder::new(order))
-    }
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SerializedWorkspace {
     pub(crate) id: WorkspaceId,
@@ -215,7 +162,6 @@ pub(crate) struct SerializedWorkspace {
     pub(crate) centered_layout: bool,
     pub(crate) display: Option<Uuid>,
     pub(crate) docks: DockStructure,
-    pub(crate) session_id: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -393,14 +339,14 @@ impl SerializedPane {
         for (index, item) in self.children.iter().enumerate() {
             let project = project.clone();
             item_tasks.push(pane.update(cx, |_, cx| {
-                SerializableItemRegistry::deserialize(
-                    &item.kind,
-                    project,
-                    workspace.clone(),
-                    workspace_id,
-                    item.item_id,
-                    cx,
-                )
+                if let Some(deserializer) = cx.global::<ItemDeserializers>().get(&item.kind) {
+                    deserializer(project, workspace.clone(), workspace_id, item.item_id, cx)
+                } else {
+                    Task::ready(Err(anyhow::anyhow!(
+                        "Deserializer does not exist for item kind: {}",
+                        item.kind
+                    )))
+                }
             })?);
             if item.active {
                 active_item_index = Some(index);
@@ -504,24 +450,5 @@ impl Column for SerializedItem {
             },
             next_index,
         ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialize_local_paths() {
-        let paths = vec!["b", "a", "c"];
-        let serialized = SerializedWorkspaceLocation::from_local_paths(paths);
-
-        assert_eq!(
-            serialized,
-            SerializedWorkspaceLocation::Local(
-                LocalPaths::new(vec!["a", "b", "c"]),
-                LocalPathsOrder::new(vec![1, 0, 2])
-            )
-        );
     }
 }

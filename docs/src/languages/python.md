@@ -16,7 +16,6 @@ For more information, see the Pyright [configuration documentation](https://micr
 The [pyright](https://github.com/microsoft/pyright) language server also accepts specific LSP related settings, not necessarily connected to a project. These can be changed in the `lsp` section of your `settings.json`.
 
 For example, in order to:
-
 - use strict type-checking level
 - diagnose all files in the workspace instead of the only open files default
 - provide the path to a specific python interpreter
@@ -94,30 +93,23 @@ You can also configure this option directly in your `settings.json` file ([pyrig
 }
 ```
 
-### Code formatting & Linting
+### Code formatting
 
-The Pyright language server does not provide code formatting or linting. If you want to detect lint errors and reformat your Python code upon saving, you'll need to set up.
+The Pyright language server does not provide code formatting. If you want to automatically reformat your Python code when saving, you'll need to specify an \_external_code formatter in your settings. See the [configuration](../configuring-zed.md) documentation for more information.
 
-A common tool for formatting Python code is [Ruff](https://black.readthedocs.io/en/stable/). It is another tool written in Rust, an extremely fast Python linter and code formatter.
-
-It is available through the [Ruff extension](https://docs.astral.sh/ruff/). However, the code formatting through the extension is not yet available. You can set up the formatter to run on save by adding the following configuration to your `settings.json`, assuming that [`Ruff`](https://docs.astral.sh/ruff/) is installed in your Python environment.
+A common tool for formatting python code is [Black](https://black.readthedocs.io/en/stable/). If you have Black installed globally, you can use it to format Python files by adding the following to your `settings.json`:
 
 ```json
 {
   "languages": {
-    ..., // other languages
     "Python": {
-      "format_on_save": {
-        "external": {
-          "command": "python",
-          "arguments": [
-            "-m",
-            "ruff",
-            "format",
-            "-"
-          ]
+      "formatter": {
+         "external": {
+          "command": "black",
+          "arguments": ["-"]
         }
-      }
+      },
+      "format_on_save": "on"
     }
   }
 }

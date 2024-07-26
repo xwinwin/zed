@@ -52,10 +52,10 @@ bitflags! {
 impl SearchOptions {
     pub fn label(&self) -> &'static str {
         match *self {
-            SearchOptions::WHOLE_WORD => "Match whole words",
-            SearchOptions::CASE_SENSITIVE => "Match case sensitively",
-            SearchOptions::INCLUDE_IGNORED => "Also search files ignored by configuration",
-            SearchOptions::REGEX => "Use regular expressions",
+            SearchOptions::WHOLE_WORD => "whole word",
+            SearchOptions::CASE_SENSITIVE => "match case",
+            SearchOptions::INCLUDE_IGNORED => "include Ignored",
+            SearchOptions::REGEX => "regular expression",
             _ => panic!("{:?} is not a named SearchOption", self),
         }
     }
@@ -64,7 +64,7 @@ impl SearchOptions {
         match *self {
             SearchOptions::WHOLE_WORD => ui::IconName::WholeWord,
             SearchOptions::CASE_SENSITIVE => ui::IconName::CaseSensitive,
-            SearchOptions::INCLUDE_IGNORED => ui::IconName::Sliders,
+            SearchOptions::INCLUDE_IGNORED => ui::IconName::FileGit,
             SearchOptions::REGEX => ui::IconName::Regex,
             _ => panic!("{:?} is not a named SearchOption", self),
         }
@@ -104,8 +104,8 @@ impl SearchOptions {
             .selected(active)
             .tooltip({
                 let action = self.to_toggle_action();
-                let label = self.label();
-                move |cx| Tooltip::for_action(label, &*action, cx)
+                let label: SharedString = format!("Toggle {}", self.label()).into();
+                move |cx| Tooltip::for_action(label.clone(), &*action, cx)
             })
     }
 }

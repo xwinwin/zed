@@ -14,9 +14,9 @@ use editor::{Editor, EditorElement, EditorStyle};
 use extension::{ExtensionManifest, ExtensionOperation, ExtensionStore};
 use fuzzy::{match_strings, StringMatchCandidate};
 use gpui::{
-    actions, uniform_list, AppContext, EventEmitter, Flatten, FocusableView, InteractiveElement,
-    KeyContext, ParentElement, Render, Styled, Task, TextStyle, UniformListScrollHandle, View,
-    ViewContext, VisualContext, WeakView, WindowContext,
+    actions, uniform_list, AnyElement, AppContext, EventEmitter, Flatten, FocusableView, FontStyle,
+    InteractiveElement, KeyContext, ParentElement, Render, Styled, Task, TextStyle,
+    UniformListScrollHandle, View, ViewContext, VisualContext, WeakView, WhiteSpace, WindowContext,
 };
 use num_format::{Locale, ToFormattedString};
 use project::DirectoryLister;
@@ -25,6 +25,7 @@ use settings::Settings;
 use theme::ThemeSettings;
 use ui::{prelude::*, CheckboxWithLabel, ContextMenu, PopoverMenu, ToggleButton, Tooltip};
 use vim::VimModeSetting;
+use workspace::item::TabContentParams;
 use workspace::{
     item::{Item, ItemEvent},
     Workspace, WorkspaceId,
@@ -48,10 +49,10 @@ pub fn init(cx: &mut AppContext) {
                     .find_map(|item| item.downcast::<ExtensionsPage>());
 
                 if let Some(existing) = existing {
-                    workspace.activate_item(&existing, true, true, cx);
+                    workspace.activate_item(&existing, cx);
                 } else {
                     let extensions_page = ExtensionsPage::new(workspace, cx);
-                    workspace.add_item_to_active_pane(Box::new(extensions_page), None, true, cx)
+                    workspace.add_item_to_active_pane(Box::new(extensions_page), None, cx)
                 }
             })
             .register_action(move |workspace, _: &InstallDevExtension, cx| {
@@ -804,8 +805,12 @@ impl ExtensionsPage {
             font_features: settings.ui_font.features.clone(),
             font_size: rems(0.875).into(),
             font_weight: settings.ui_font.weight,
+            font_style: FontStyle::Normal,
             line_height: relative(1.3),
-            ..Default::default()
+            background_color: None,
+            underline: None,
+            strikethrough: None,
+            white_space: WhiteSpace::Normal,
         };
 
         EditorElement::new(
@@ -910,7 +915,7 @@ impl ExtensionsPage {
         if let Some(workspace) = self.workspace.upgrade() {
             let fs = workspace.read(cx).app_state().fs.clone();
             let selection = *selection;
-            settings::update_settings_file::<T>(fs, cx, move |settings, _| {
+            settings::update_settings_file::<T>(fs, cx, move |settings| {
                 let value = match selection {
                     Selection::Unselected => false,
                     Selection::Selected => true,
@@ -1130,8 +1135,14 @@ impl FocusableView for ExtensionsPage {
 impl Item for ExtensionsPage {
     type Event = ItemEvent;
 
-    fn tab_content_text(&self, _cx: &WindowContext) -> Option<SharedString> {
-        Some("Extensions".into())
+    fn tab_content(&self, params: TabContentParams, _: &WindowContext) -> AnyElement {
+        Label::new("Extensions")
+            .color(if params.selected {
+                Color::Default
+            } else {
+                Color::Muted
+            })
+            .into_any_element()
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {

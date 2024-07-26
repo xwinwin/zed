@@ -180,9 +180,7 @@ fn test_syntax_map_layers_for_range(cx: &mut AppContext) {
 fn test_dynamic_language_injection(cx: &mut AppContext) {
     let registry = Arc::new(LanguageRegistry::test(cx.background_executor().clone()));
     let markdown = Arc::new(markdown_lang());
-    let markdown_inline = Arc::new(markdown_inline_lang());
     registry.add(markdown.clone());
-    registry.add(markdown_inline.clone());
     registry.add(Arc::new(rust_lang()));
     registry.add(Arc::new(ruby_lang()));
 
@@ -202,14 +200,12 @@ fn test_dynamic_language_injection(cx: &mut AppContext) {
     let mut syntax_map = SyntaxMap::new();
     syntax_map.set_language_registry(registry.clone());
     syntax_map.reparse(markdown.clone(), &buffer);
-    syntax_map.reparse(markdown_inline.clone(), &buffer);
     assert_layers_for_range(
             &syntax_map,
             &buffer,
             Point::new(3, 0)..Point::new(3, 0),
             &[
-                "(document (section (paragraph (inline)) (fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (block_continuation) (code_fence_content (block_continuation)) (fenced_code_block_delimiter))))",
-                "(inline (code_span (code_span_delimiter) (code_span_delimiter)))",
+                "...(fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (code_fence_content) (fenced_code_block_delimiter...",
                 "...(function_item name: (identifier) parameters: (parameters) body: (block)...",
             ],
         );
@@ -219,14 +215,12 @@ fn test_dynamic_language_injection(cx: &mut AppContext) {
     buffer.edit([(macro_name_range, "ruby")]);
     syntax_map.interpolate(&buffer);
     syntax_map.reparse(markdown.clone(), &buffer);
-    syntax_map.reparse(markdown_inline.clone(), &buffer);
     assert_layers_for_range(
             &syntax_map,
             &buffer,
             Point::new(3, 0)..Point::new(3, 0),
             &[
-                "(document (section (paragraph (inline)) (fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (block_continuation) (code_fence_content (block_continuation)) (fenced_code_block_delimiter))))",
-                "(inline (code_span (code_span_delimiter) (code_span_delimiter)))",
+                "...(fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (code_fence_content) (fenced_code_block_delimiter...",
                 "...(call method: (identifier) arguments: (argument_list (call method: (identifier) arguments: (argument_list) block: (block)...",
             ],
         );
@@ -236,29 +230,25 @@ fn test_dynamic_language_injection(cx: &mut AppContext) {
     buffer.edit([(macro_name_range, "html")]);
     syntax_map.interpolate(&buffer);
     syntax_map.reparse(markdown.clone(), &buffer);
-    syntax_map.reparse(markdown_inline.clone(), &buffer);
     assert_layers_for_range(
             &syntax_map,
             &buffer,
             Point::new(3, 0)..Point::new(3, 0),
             &[
-                "(document (section (paragraph (inline)) (fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (block_continuation) (code_fence_content (block_continuation)) (fenced_code_block_delimiter))))",
-                "(inline (code_span (code_span_delimiter) (code_span_delimiter)))",
+                "...(fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (code_fence_content) (fenced_code_block_delimiter..."
             ],
         );
     assert!(syntax_map.contains_unknown_injections());
 
     registry.add(Arc::new(html_lang()));
     syntax_map.reparse(markdown.clone(), &buffer);
-    syntax_map.reparse(markdown_inline.clone(), &buffer);
     assert_layers_for_range(
             &syntax_map,
             &buffer,
             Point::new(3, 0)..Point::new(3, 0),
             &[
-                "(document (section (paragraph (inline)) (fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (block_continuation) (code_fence_content (block_continuation)) (fenced_code_block_delimiter))))",
-                "(inline (code_span (code_span_delimiter) (code_span_delimiter)))",
-                "(document (text))",
+                "...(fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (code_fence_content) (fenced_code_block_delimiter...",
+                "(fragment (text))",
             ],
         );
     assert!(!syntax_map.contains_unknown_injections());
@@ -779,9 +769,9 @@ fn test_empty_combined_injections_inside_injections(cx: &mut AppContext) {
         &buffer,
         Point::new(0, 0)..Point::new(5, 0),
         &[
-            "(document (section (fenced_code_block (fenced_code_block_delimiter) (info_string (language)) (block_continuation) (code_fence_content (block_continuation)) (fenced_code_block_delimiter)) (paragraph (inline))))",
+            "...(paragraph)...",
             "(template...",
-            "(document (text))",
+            "(fragment...",
             // The ruby syntax tree should be empty, since there are
             // no interpolations in the ERB template.
             "(program)",
@@ -1065,7 +1055,6 @@ fn test_edit_sequence(
     registry.add(Arc::new(html_lang()));
     registry.add(Arc::new(erb_lang()));
     registry.add(Arc::new(markdown_lang()));
-    registry.add(Arc::new(markdown_inline_lang()));
 
     let language = registry
         .language_for_name(language_name)
@@ -1239,7 +1228,7 @@ fn markdown_lang() -> Language {
             },
             ..Default::default()
         },
-        Some(tree_sitter_md::language()),
+        Some(tree_sitter_markdown::language()),
     )
     .with_injection_query(
         r#"
@@ -1250,16 +1239,6 @@ fn markdown_lang() -> Language {
         "#,
     )
     .unwrap()
-}
-
-fn markdown_inline_lang() -> Language {
-    Language::new(
-        LanguageConfig {
-            name: "Markdown-Inline".into(),
-            ..LanguageConfig::default()
-        },
-        Some(tree_sitter_md::inline_language()),
-    )
 }
 
 fn elixir_lang() -> Language {

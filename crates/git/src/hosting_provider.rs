@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use collections::BTreeMap;
 use derive_more::{Deref, DerefMut};
 use gpui::{AppContext, Global};
-use http_client::HttpClient;
+use http::HttpClient;
 use parking_lot::RwLock;
 use url::Url;
 

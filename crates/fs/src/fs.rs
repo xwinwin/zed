@@ -12,7 +12,6 @@ use std::os::unix::fs::MetadataExt;
 use async_tar::Archive;
 use futures::{future::BoxFuture, AsyncRead, Stream, StreamExt};
 use git::repository::{GitRepository, RealGitRepository};
-use gpui::{AppContext, Global, ReadGlobal};
 use rope::Rope;
 use smol::io::AsyncWriteExt;
 use std::{
@@ -96,27 +95,8 @@ pub trait Fs: Send + Sync {
     fn open_repo(&self, abs_dot_git: &Path) -> Option<Arc<dyn GitRepository>>;
     fn is_fake(&self) -> bool;
     async fn is_case_sensitive(&self) -> Result<bool>;
-
     #[cfg(any(test, feature = "test-support"))]
-    fn as_fake(&self) -> &FakeFs {
-        panic!("called as_fake on a real fs");
-    }
-}
-
-struct GlobalFs(Arc<dyn Fs>);
-
-impl Global for GlobalFs {}
-
-impl dyn Fs {
-    /// Returns the global [`Fs`].
-    pub fn global(cx: &AppContext) -> Arc<Self> {
-        GlobalFs::global(cx).0.clone()
-    }
-
-    /// Sets the global [`Fs`].
-    pub fn set_global(fs: Arc<Self>, cx: &mut AppContext) {
-        cx.set_global(GlobalFs(fs));
-    }
+    fn as_fake(&self) -> &FakeFs;
 }
 
 #[derive(Copy, Clone, Default)]
@@ -157,7 +137,10 @@ pub struct RealFs {
     git_binary_path: Option<PathBuf>,
 }
 
-pub struct RealWatcher {}
+pub struct RealWatcher {
+    #[cfg(target_os = "linux")]
+    fs_watcher: parking_lot::Mutex<notify::INotifyWatcher>,
+}
 
 impl RealFs {
     pub fn new(
@@ -486,29 +469,29 @@ impl Fs for RealFs {
         let pending_paths: Arc<Mutex<Vec<PathBuf>>> = Default::default();
         let root_path = path.to_path_buf();
 
-        watcher::global(|g| {
+        let file_watcher = notify::recommended_watcher({
             let tx = tx.clone();
             let pending_paths = pending_paths.clone();
-            g.add(move |event: &notify::Event| {
-                let mut paths = event
-                    .paths
-                    .iter()
-                    .filter(|path| path.starts_with(&root_path))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                if !paths.is_empty() {
-                    paths.sort();
-                    let mut pending_paths = pending_paths.lock();
-                    if pending_paths.is_empty() {
-                        tx.try_send(()).ok();
+            move |event: Result<notify::Event, _>| {
+                if let Some(event) = event.log_err() {
+                    let mut paths = event.paths;
+                    paths.retain(|path| path.starts_with(&root_path));
+                    if !paths.is_empty() {
+                        paths.sort();
+                        let mut pending_paths = pending_paths.lock();
+                        if pending_paths.is_empty() {
+                            tx.try_send(()).ok();
+                        }
+                        util::extend_sorted(&mut *pending_paths, paths, usize::MAX, PathBuf::cmp);
                     }
-                    util::extend_sorted(&mut *pending_paths, paths, usize::MAX, PathBuf::cmp);
                 }
-            })
+            }
         })
-        .log_err();
+        .expect("Could not start file watcher");
 
-        let watcher = Arc::new(RealWatcher {});
+        let watcher = Arc::new(RealWatcher {
+            fs_watcher: parking_lot::Mutex::new(file_watcher),
+        });
 
         watcher.add(path).ok(); // Ignore "file doesn't exist error" and rely on parent watcher.
 
@@ -619,6 +602,11 @@ impl Fs for RealFs {
         temp_dir.close()?;
         case_sensitive
     }
+
+    #[cfg(any(test, feature = "test-support"))]
+    fn as_fake(&self) -> &FakeFs {
+        panic!("called `RealFs::as_fake`")
+    }
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -636,16 +624,18 @@ impl Watcher for RealWatcher {
 impl Watcher for RealWatcher {
     fn add(&self, path: &Path) -> Result<()> {
         use notify::Watcher;
-        Ok(watcher::global(|w| {
-            w.inotify
-                .lock()
-                .watch(path, notify::RecursiveMode::NonRecursive)
-        })??)
+
+        self.fs_watcher
+            .lock()
+            .watch(path, notify::RecursiveMode::NonRecursive)?;
+        Ok(())
     }
 
     fn remove(&self, path: &Path) -> Result<()> {
         use notify::Watcher;
-        Ok(watcher::global(|w| w.inotify.lock().unwatch(path))??)
+
+        self.fs_watcher.lock().unwatch(path)?;
+        Ok(())
     }
 }
 
@@ -1805,51 +1795,5 @@ mod tests {
             fs.load("/root/dir2/link-to-dir3/d".as_ref()).await.unwrap(),
             "D",
         );
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub mod watcher {
-    use std::sync::OnceLock;
-
-    use parking_lot::Mutex;
-    use util::ResultExt;
-
-    pub struct GlobalWatcher {
-        // two mutexes because calling inotify.add triggers an inotify.event, which needs watchers.
-        pub(super) inotify: Mutex<notify::INotifyWatcher>,
-        pub(super) watchers: Mutex<Vec<Box<dyn Fn(&notify::Event) + Send + Sync>>>,
-    }
-
-    impl GlobalWatcher {
-        pub(super) fn add(&self, cb: impl Fn(&notify::Event) + Send + Sync + 'static) {
-            self.watchers.lock().push(Box::new(cb))
-        }
-    }
-
-    static INOTIFY_INSTANCE: OnceLock<anyhow::Result<GlobalWatcher, notify::Error>> =
-        OnceLock::new();
-
-    fn handle_event(event: Result<notify::Event, notify::Error>) {
-        let Some(event) = event.log_err() else { return };
-        global::<()>(move |watcher| {
-            for f in watcher.watchers.lock().iter() {
-                f(&event)
-            }
-        })
-        .log_err();
-    }
-
-    pub fn global<T>(f: impl FnOnce(&GlobalWatcher) -> T) -> anyhow::Result<T> {
-        let result = INOTIFY_INSTANCE.get_or_init(|| {
-            notify::recommended_watcher(handle_event).map(|file_watcher| GlobalWatcher {
-                inotify: Mutex::new(file_watcher),
-                watchers: Default::default(),
-            })
-        });
-        match result {
-            Ok(g) => Ok(f(g)),
-            Err(e) => Err(anyhow::anyhow!("{}", e)),
-        }
     }
 }

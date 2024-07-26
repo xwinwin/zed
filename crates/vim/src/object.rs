@@ -838,16 +838,13 @@ fn surrounding_markers(
     }
 
     if opening.is_none() {
-        let mut chars_before = movement::chars_before(map, point).peekable();
-        while let Some((ch, range)) = chars_before.next() {
+        for ((ch, range), (before_ch, _)) in movement::chars_before(map, point).tuple_windows() {
             if ch == '\n' && !search_across_lines {
                 break;
             }
 
-            if let Some((before_ch, _)) = chars_before.peek() {
-                if *before_ch == '\\' {
-                    continue;
-                }
+            if before_ch == '\\' {
+                continue;
             }
 
             if ch == open_marker {
@@ -1211,24 +1208,6 @@ mod test {
     async fn test_singleline_surrounding_character_objects(cx: &mut gpui::TestAppContext) {
         let mut cx = NeovimBackedTestContext::new(cx).await;
         cx.set_shared_wrap(12).await;
-
-        cx.set_shared_state(indoc! {
-            "\"ˇhello world\"!"
-        })
-        .await;
-        cx.simulate_shared_keystrokes("v i \"").await;
-        cx.shared_state().await.assert_eq(indoc! {
-            "\"«hello worldˇ»\"!"
-        });
-
-        cx.set_shared_state(indoc! {
-            "\"hˇello world\"!"
-        })
-        .await;
-        cx.simulate_shared_keystrokes("v i \"").await;
-        cx.shared_state().await.assert_eq(indoc! {
-            "\"«hello worldˇ»\"!"
-        });
 
         cx.set_shared_state(indoc! {
             "helˇlo \"world\"!"

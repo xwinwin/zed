@@ -11,22 +11,20 @@ use editor::{
     EditorEvent,
 };
 use gpui::{
-    actions, AnyView, AppContext, ClipboardItem, Entity as _, EventEmitter, FocusableView, Model,
-    Pixels, Point, Render, Subscription, Task, View, ViewContext, VisualContext as _, WeakView,
-    WindowContext,
+    actions, AnyElement, AnyView, AppContext, ClipboardItem, Entity as _, EventEmitter,
+    FocusableView, IntoElement as _, Model, Pixels, Point, Render, Subscription, Task, View,
+    ViewContext, VisualContext as _, WeakView, WindowContext,
 };
 use project::Project;
-use rpc::proto::ChannelVisibility;
 use std::{
     any::{Any, TypeId},
     sync::Arc,
 };
-use ui::prelude::*;
+use ui::{prelude::*, Label};
 use util::ResultExt;
-use workspace::item::TabContentParams;
 use workspace::{item::Dedup, notifications::NotificationId};
 use workspace::{
-    item::{FollowableItem, Item, ItemEvent, ItemHandle},
+    item::{FollowableItem, Item, ItemEvent, ItemHandle, TabContentParams},
     searchable::SearchableItemHandle,
     ItemNavHistory, Pane, SaveIntent, Toast, ViewId, Workspace, WorkspaceId,
 };
@@ -387,45 +385,24 @@ impl Item for ChannelView {
         }
     }
 
-    fn tab_icon(&self, cx: &WindowContext) -> Option<Icon> {
-        let channel = self.channel(cx)?;
-        let icon = match channel.visibility {
-            ChannelVisibility::Public => IconName::Public,
-            ChannelVisibility::Members => IconName::Hash,
-        };
-
-        Some(Icon::new(icon))
-    }
-
-    fn tab_content(&self, params: TabContentParams, cx: &WindowContext) -> gpui::AnyElement {
-        let (channel_name, status) = if let Some(channel) = self.channel(cx) {
-            let status = match (
+    fn tab_content(&self, params: TabContentParams, cx: &WindowContext) -> AnyElement {
+        let label = if let Some(channel) = self.channel(cx) {
+            match (
                 self.channel_buffer.read(cx).buffer().read(cx).read_only(),
                 self.channel_buffer.read(cx).is_connected(),
             ) {
-                (false, true) => None,
-                (true, true) => Some("read-only"),
-                (_, false) => Some("disconnected"),
-            };
-
-            (channel.name.clone(), status)
+                (false, true) => format!("#{}", channel.name),
+                (true, true) => format!("#{} (read-only)", channel.name),
+                (_, false) => format!("#{} (disconnected)", channel.name),
+            }
         } else {
-            ("<unknown>".into(), Some("disconnected"))
+            "channel notes (disconnected)".to_string()
         };
-
-        h_flex()
-            .gap_2()
-            .child(
-                Label::new(channel_name)
-                    .color(params.text_color())
-                    .italic(params.preview),
-            )
-            .when_some(status, |element, status| {
-                element.child(
-                    Label::new(status)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                )
+        Label::new(label)
+            .color(if params.selected {
+                Color::Default
+            } else {
+                Color::Muted
             })
             .into_any_element()
     }

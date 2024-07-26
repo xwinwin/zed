@@ -4,7 +4,7 @@ use super::*;
 use client::{test::FakeServer, Client, UserStore};
 use clock::FakeSystemClock;
 use gpui::{AppContext, Context, Model, SemanticVersion, TestAppContext};
-use http_client::FakeHttpClient;
+use http::FakeHttpClient;
 use rpc::proto::{self};
 use settings::SettingsStore;
 

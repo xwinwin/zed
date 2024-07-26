@@ -222,7 +222,7 @@ mod tests {
 
         let worktree_ids = project.read_with(cx, |project, cx| {
             project
-                .worktrees(cx)
+                .worktrees()
                 .map(|worktree| worktree.read(cx).id())
                 .collect::<Vec<_>>()
         });

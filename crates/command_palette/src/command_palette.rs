@@ -17,10 +17,9 @@ use gpui::{
 use picker::{Picker, PickerDelegate};
 
 use postage::{sink::Sink, stream::Stream};
-use settings::Settings;
 use ui::{h_flex, prelude::*, v_flex, HighlightedLabel, KeyBinding, ListItem, ListItemSpacing};
 use util::ResultExt;
-use workspace::{ModalView, Workspace, WorkspaceSettings};
+use workspace::{ModalView, Workspace};
 use zed_actions::OpenZedUrl;
 
 actions!(command_palette, [Toggle]);
@@ -249,13 +248,9 @@ impl PickerDelegate for CommandPaletteDelegate {
 
     fn update_matches(
         &mut self,
-        mut query: String,
+        query: String,
         cx: &mut ViewContext<Picker<Self>>,
     ) -> gpui::Task<()> {
-        let settings = WorkspaceSettings::get_global(cx);
-        if let Some(alias) = settings.command_aliases.get(&query) {
-            query = alias.to_string();
-        }
         let (mut tx, mut rx) = postage::dispatch::channel(1);
         let task = cx.background_executor().spawn({
             let mut commands = self.all_commands.clone();
@@ -482,7 +477,7 @@ mod tests {
         });
 
         workspace.update(cx, |workspace, cx| {
-            workspace.add_item_to_active_pane(Box::new(editor.clone()), None, true, cx);
+            workspace.add_item_to_active_pane(Box::new(editor.clone()), None, cx);
             editor.update(cx, |editor, cx| editor.focus(cx))
         });
 

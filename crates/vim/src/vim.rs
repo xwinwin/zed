@@ -147,7 +147,7 @@ fn register(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) {
     workspace.register_action(|workspace: &mut Workspace, _: &ToggleVimMode, cx| {
         let fs = workspace.app_state().fs.clone();
         let currently_enabled = VimModeSetting::get_global(cx).0;
-        update_settings_file::<VimModeSetting>(fs, cx, move |setting, _| {
+        update_settings_file::<VimModeSetting>(fs, cx, move |setting| {
             *setting = Some(!currently_enabled)
         })
     });
@@ -391,15 +391,6 @@ impl Vim {
         self.stop_recording();
     }
 
-    // When handling an action, you must create visual marks if you will switch to normal
-    // mode without the default selection behavior.
-    fn store_visual_marks(&mut self, cx: &mut WindowContext) {
-        let mode = self.state().mode;
-        if mode.is_visual() {
-            create_visual_marks(self, mode, cx);
-        }
-    }
-
     fn switch_mode(&mut self, mode: Mode, leave_selections: bool, cx: &mut WindowContext) {
         let state = self.state();
         let last_mode = state.mode;
@@ -409,7 +400,6 @@ impl Vim {
             state.last_mode = last_mode;
             state.mode = mode;
             state.operator_stack.clear();
-            state.selected_register.take();
             if mode == Mode::Normal || mode != last_mode {
                 state.current_tx.take();
                 state.current_anchor.take();
@@ -422,12 +412,12 @@ impl Vim {
         // Sync editor settings like clip mode
         self.sync_vim_settings(cx);
 
-        if leave_selections {
-            return;
-        }
-
         if !mode.is_visual() && last_mode.is_visual() {
             create_visual_marks(self, last_mode, cx);
+        }
+
+        if leave_selections {
+            return;
         }
 
         // Adjust selections
@@ -491,25 +481,11 @@ impl Vim {
     fn push_count_digit(&mut self, number: usize, cx: &mut WindowContext) {
         if self.active_operator().is_some() {
             self.update_state(|state| {
-                let post_count = state.post_count.unwrap_or(0);
-
-                state.post_count = Some(
-                    post_count
-                        .checked_mul(10)
-                        .and_then(|post_count| post_count.checked_add(number))
-                        .unwrap_or(post_count),
-                )
+                state.post_count = Some(state.post_count.unwrap_or(0) * 10 + number)
             })
         } else {
             self.update_state(|state| {
-                let pre_count = state.pre_count.unwrap_or(0);
-
-                state.pre_count = Some(
-                    pre_count
-                        .checked_mul(10)
-                        .and_then(|pre_count| pre_count.checked_add(number))
-                        .unwrap_or(pre_count),
-                )
+                state.pre_count = Some(state.pre_count.unwrap_or(0) * 10 + number)
             })
         }
         // update the keymap so that 0 works
@@ -691,7 +667,6 @@ impl Vim {
                 | Operator::Lowercase
                 | Operator::Uppercase
                 | Operator::OppositeCase
-                | Operator::ToggleComments
         ) {
             self.start_recording(cx)
         };
@@ -705,9 +680,6 @@ impl Vim {
                 | Operator::DeleteSurrounds
         ) {
             self.update_state(|state| state.operator_stack.clear());
-            if let Operator::AddSurrounds { target: None } = operator {
-                self.start_recording(cx);
-            }
         };
         self.update_state(|state| state.operator_stack.push(operator));
         self.sync_vim_settings(cx);

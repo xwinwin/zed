@@ -16,7 +16,7 @@ use gpui::{
     EventEmitter, FocusHandle, FocusableView, FontStyle, InteractiveElement, IntoElement,
     ListOffset, ListState, Model, MouseDownEvent, ParentElement, Pixels, Point, PromptLevel,
     Render, SharedString, Styled, Subscription, Task, TextStyle, View, ViewContext, VisualContext,
-    WeakView,
+    WeakView, WhiteSpace,
 };
 use menu::{Cancel, Confirm, SecondaryConfirm, SelectNext, SelectPrev};
 use project::{Fs, Project};
@@ -2194,7 +2194,10 @@ impl CollabPanel {
             font_weight: settings.ui_font.weight,
             font_style: FontStyle::Normal,
             line_height: relative(1.3),
-            ..Default::default()
+            background_color: None,
+            underline: None,
+            strikethrough: None,
+            white_space: WhiteSpace::Normal,
         };
 
         EditorElement::new(
@@ -2806,7 +2809,7 @@ impl Panel for CollabPanel {
         settings::update_settings_file::<CollaborationPanelSettings>(
             self.fs.clone(),
             cx,
-            move |settings, _| settings.dock = Some(position),
+            move |settings| settings.dock = Some(position),
         );
     }
 

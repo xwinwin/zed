@@ -13,7 +13,7 @@ use image::{ImageBuffer, ImageError};
 #[cfg(target_os = "macos")]
 use media::core_video::CVImageBuffer;
 
-use http_client;
+use http;
 use thiserror::Error;
 use util::ResultExt;
 
@@ -375,7 +375,6 @@ impl Asset for Image {
                     response.body_mut().read_to_end(&mut body).await?;
                     if !response.status().is_success() {
                         return Err(ImageCacheError::BadStatus {
-                            uri,
                             status: response.status(),
                             body: String::from_utf8_lossy(&body).into_owned(),
                         });
@@ -413,17 +412,15 @@ impl Asset for Image {
 pub enum ImageCacheError {
     /// An error that occurred while fetching an image from a remote source.
     #[error("http error: {0}")]
-    Client(#[from] http_client::Error),
+    Client(#[from] http::Error),
     /// An error that occurred while reading the image from disk.
     #[error("IO error: {0}")]
     Io(Arc<std::io::Error>),
     /// An error that occurred while processing an image.
-    #[error("unexpected http status for {uri}: {status}, body: {body}")]
+    #[error("unexpected http status: {status}, body: {body}")]
     BadStatus {
-        /// The URI of the image.
-        uri: SharedUri,
         /// The HTTP status code.
-        status: http_client::StatusCode,
+        status: http::StatusCode,
         /// The HTTP response body.
         body: String,
     },

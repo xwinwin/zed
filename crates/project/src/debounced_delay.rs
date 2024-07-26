@@ -1,25 +1,26 @@
+use std::time::Duration;
+
 use futures::{channel::oneshot, FutureExt};
 use gpui::{ModelContext, Task};
-use std::{marker::PhantomData, time::Duration};
 
-pub struct DebouncedDelay<E: 'static> {
+use crate::Project;
+
+pub struct DebouncedDelay {
     task: Option<Task<()>>,
     cancel_channel: Option<oneshot::Sender<()>>,
-    _phantom_data: PhantomData<E>,
 }
 
-impl<E: 'static> DebouncedDelay<E> {
-    pub fn new() -> Self {
-        Self {
+impl DebouncedDelay {
+    pub fn new() -> DebouncedDelay {
+        DebouncedDelay {
             task: None,
             cancel_channel: None,
-            _phantom_data: PhantomData,
         }
     }
 
-    pub fn fire_new<F>(&mut self, delay: Duration, cx: &mut ModelContext<E>, func: F)
+    pub fn fire_new<F>(&mut self, delay: Duration, cx: &mut ModelContext<Project>, func: F)
     where
-        F: 'static + Send + FnOnce(&mut E, &mut ModelContext<E>) -> Task<()>,
+        F: 'static + Send + FnOnce(&mut Project, &mut ModelContext<Project>) -> Task<()>,
     {
         if let Some(channel) = self.cancel_channel.take() {
             _ = channel.send(());

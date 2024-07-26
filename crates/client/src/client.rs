@@ -20,7 +20,7 @@ use futures::{
 use gpui::{
     actions, AnyModel, AnyWeakModel, AppContext, AsyncAppContext, Global, Model, Task, WeakModel,
 };
-use http_client::{AsyncBody, HttpClient, HttpClientWithUrl};
+use http::{HttpClient, HttpClientWithUrl};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
 use postage::watch;
@@ -233,7 +233,7 @@ pub enum EstablishConnectionError {
     #[error("{0}")]
     Other(#[from] anyhow::Error),
     #[error("{0}")]
-    Http(#[from] http_client::Error),
+    Http(#[from] http::Error),
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
@@ -1351,7 +1351,7 @@ impl Client {
         let mut url = self.rpc_url(http.clone(), None).await?;
         url.set_path("/user");
         url.set_query(Some(&format!("github_login={login}")));
-        let request: http_client::Request<AsyncBody> = Request::get(url.as_str())
+        let request = Request::get(url.as_str())
             .header("Authorization", format!("token {api_token}"))
             .body("".into())?;
 
@@ -1410,7 +1410,7 @@ impl Client {
         self.peer.send(self.connection_id()?, message)
     }
 
-    pub fn send_dynamic(&self, envelope: proto::Envelope) -> Result<()> {
+    fn send_dynamic(&self, envelope: proto::Envelope) -> Result<()> {
         let connection_id = self.connection_id()?;
         self.peer.send_dynamic(connection_id, envelope)
     }
@@ -1783,7 +1783,7 @@ mod tests {
 
     use clock::FakeSystemClock;
     use gpui::{BackgroundExecutor, Context, TestAppContext};
-    use http_client::FakeHttpClient;
+    use http::FakeHttpClient;
     use parking_lot::Mutex;
     use proto::TypedEnvelope;
     use settings::SettingsStore;

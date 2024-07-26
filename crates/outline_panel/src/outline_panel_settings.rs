@@ -30,7 +30,7 @@ pub struct OutlinePanelSettingsContent {
     ///
     /// Default: true
     pub button: Option<bool>,
-    /// Customize default width (in pixels) taken by outline panel
+    /// Customise default width (in pixels) taken by outline panel
     ///
     /// Default: 240
     pub default_width: Option<f32>,

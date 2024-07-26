@@ -107,7 +107,6 @@ impl ActivityIndicator {
                                 Editor::for_buffer(buffer, Some(project.clone()), cx)
                             })),
                             None,
-                            true,
                             cx,
                         );
                     })?;

@@ -23,7 +23,7 @@ use language::{
     FakeLspAdapter, IndentGuide, LanguageConfig, LanguageConfigOverride, LanguageMatcher, Override,
     ParsedMarkdown, Point,
 };
-use language_settings::{Formatter, FormatterList, IndentGuideSettings};
+use language_settings::IndentGuideSettings;
 use multi_buffer::MultiBufferIndentGuide;
 use parking_lot::Mutex;
 use project::FakeFs;
@@ -4716,13 +4716,12 @@ async fn test_select_larger_smaller_syntax_node(cx: &mut gpui::TestAppContext) {
 
     let buffer = cx.new_model(|cx| Buffer::local(text, cx).with_language(language, cx));
     let buffer = cx.new_model(|cx| MultiBuffer::singleton(buffer, cx));
-    let (editor, cx) = cx.add_window_view(|cx| build_editor(buffer, cx));
+    let (view, cx) = cx.add_window_view(|cx| build_editor(buffer, cx));
 
-    editor
-        .condition::<crate::EditorEvent>(&cx, |view, cx| !view.buffer.read(cx).is_parsing(cx))
+    view.condition::<crate::EditorEvent>(&cx, |view, cx| !view.buffer.read(cx).is_parsing(cx))
         .await;
 
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.change_selections(None, cx, |s| {
             s.select_display_ranges([
                 DisplayPoint::new(DisplayRow(0), 25)..DisplayPoint::new(DisplayRow(0), 25),
@@ -4732,126 +4731,94 @@ async fn test_select_larger_smaller_syntax_node(cx: &mut gpui::TestAppContext) {
         });
         view.select_larger_syntax_node(&SelectLargerSyntaxNode, cx);
     });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::{mod3, «mod4ˇ»};
+    assert_eq!(
+        view.update(cx, |view, cx| { view.selections.display_ranges(cx) }),
+        &[
+            DisplayPoint::new(DisplayRow(0), 23)..DisplayPoint::new(DisplayRow(0), 27),
+            DisplayPoint::new(DisplayRow(2), 35)..DisplayPoint::new(DisplayRow(2), 7),
+            DisplayPoint::new(DisplayRow(3), 15)..DisplayPoint::new(DisplayRow(3), 21),
+        ]
+    );
 
-                fn fn_1«ˇ(param1: bool, param2: &str)» {
-                    let var1 = "«textˇ»";
-                }
-            "#},
-            cx,
-        );
-    });
-
-    editor.update(cx, |view, cx| {
-        view.select_larger_syntax_node(&SelectLargerSyntaxNode, cx);
-    });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::«{mod3, mod4}ˇ»;
-
-                «ˇfn fn_1(param1: bool, param2: &str) {
-                    let var1 = "text";
-                }»
-            "#},
-            cx,
-        );
-    });
-
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.select_larger_syntax_node(&SelectLargerSyntaxNode, cx);
     });
     assert_eq!(
-        editor.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        &[
+            DisplayPoint::new(DisplayRow(0), 16)..DisplayPoint::new(DisplayRow(0), 28),
+            DisplayPoint::new(DisplayRow(4), 1)..DisplayPoint::new(DisplayRow(2), 0),
+        ]
+    );
+
+    _ = view.update(cx, |view, cx| {
+        view.select_larger_syntax_node(&SelectLargerSyntaxNode, cx);
+    });
+    assert_eq!(
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
         &[DisplayPoint::new(DisplayRow(5), 0)..DisplayPoint::new(DisplayRow(0), 0)]
     );
 
     // Trying to expand the selected syntax node one more time has no effect.
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.select_larger_syntax_node(&SelectLargerSyntaxNode, cx);
     });
     assert_eq!(
-        editor.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
         &[DisplayPoint::new(DisplayRow(5), 0)..DisplayPoint::new(DisplayRow(0), 0)]
     );
 
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.select_smaller_syntax_node(&SelectSmallerSyntaxNode, cx);
     });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::«{mod3, mod4}ˇ»;
+    assert_eq!(
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        &[
+            DisplayPoint::new(DisplayRow(0), 16)..DisplayPoint::new(DisplayRow(0), 28),
+            DisplayPoint::new(DisplayRow(4), 1)..DisplayPoint::new(DisplayRow(2), 0),
+        ]
+    );
 
-                «ˇfn fn_1(param1: bool, param2: &str) {
-                    let var1 = "text";
-                }»
-            "#},
-            cx,
-        );
-    });
-
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.select_smaller_syntax_node(&SelectSmallerSyntaxNode, cx);
     });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::{mod3, «mod4ˇ»};
+    assert_eq!(
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        &[
+            DisplayPoint::new(DisplayRow(0), 23)..DisplayPoint::new(DisplayRow(0), 27),
+            DisplayPoint::new(DisplayRow(2), 35)..DisplayPoint::new(DisplayRow(2), 7),
+            DisplayPoint::new(DisplayRow(3), 15)..DisplayPoint::new(DisplayRow(3), 21),
+        ]
+    );
 
-                fn fn_1«ˇ(param1: bool, param2: &str)» {
-                    let var1 = "«textˇ»";
-                }
-            "#},
-            cx,
-        );
-    });
-
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.select_smaller_syntax_node(&SelectSmallerSyntaxNode, cx);
     });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::{mod3, mo«ˇ»d4};
-
-                fn fn_1(para«ˇm1: bool, pa»ram2: &str) {
-                    let var1 = "te«ˇ»xt";
-                }
-            "#},
-            cx,
-        );
-    });
+    assert_eq!(
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        &[
+            DisplayPoint::new(DisplayRow(0), 25)..DisplayPoint::new(DisplayRow(0), 25),
+            DisplayPoint::new(DisplayRow(2), 24)..DisplayPoint::new(DisplayRow(2), 12),
+            DisplayPoint::new(DisplayRow(3), 18)..DisplayPoint::new(DisplayRow(3), 18),
+        ]
+    );
 
     // Trying to shrink the selected syntax node one more time has no effect.
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.select_smaller_syntax_node(&SelectSmallerSyntaxNode, cx);
     });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::{mod3, mo«ˇ»d4};
-
-                fn fn_1(para«ˇm1: bool, pa»ram2: &str) {
-                    let var1 = "te«ˇ»xt";
-                }
-            "#},
-            cx,
-        );
-    });
+    assert_eq!(
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        &[
+            DisplayPoint::new(DisplayRow(0), 25)..DisplayPoint::new(DisplayRow(0), 25),
+            DisplayPoint::new(DisplayRow(2), 24)..DisplayPoint::new(DisplayRow(2), 12),
+            DisplayPoint::new(DisplayRow(3), 18)..DisplayPoint::new(DisplayRow(3), 18),
+        ]
+    );
 
     // Ensure that we keep expanding the selection if the larger selection starts or ends within
     // a fold.
-    editor.update(cx, |view, cx| {
+    _ = view.update(cx, |view, cx| {
         view.fold_ranges(
             vec![
                 (
@@ -4868,19 +4835,14 @@ async fn test_select_larger_smaller_syntax_node(cx: &mut gpui::TestAppContext) {
         );
         view.select_larger_syntax_node(&SelectLargerSyntaxNode, cx);
     });
-    editor.update(cx, |editor, cx| {
-        assert_text_with_selections(
-            editor,
-            indoc! {r#"
-                use mod1::mod2::«{mod3, mod4}ˇ»;
-
-                fn fn_1«ˇ(param1: bool, param2: &str)» {
-                    «let var1 = "text";ˇ»
-                }
-            "#},
-            cx,
-        );
-    });
+    assert_eq!(
+        view.update(cx, |view, cx| view.selections.display_ranges(cx)),
+        &[
+            DisplayPoint::new(DisplayRow(0), 16)..DisplayPoint::new(DisplayRow(0), 28),
+            DisplayPoint::new(DisplayRow(2), 35)..DisplayPoint::new(DisplayRow(2), 7),
+            DisplayPoint::new(DisplayRow(3), 4)..DisplayPoint::new(DisplayRow(3), 23),
+        ]
+    );
 }
 
 #[gpui::test]
@@ -6291,8 +6253,8 @@ async fn test_multibuffer_format_during_save(cx: &mut gpui::TestAppContext) {
         },
     );
 
-    let worktree = project.update(cx, |project, cx| {
-        let mut worktrees = project.worktrees(cx).collect::<Vec<_>>();
+    let worktree = project.update(cx, |project, _| {
+        let mut worktrees = project.worktrees().collect::<Vec<_>>();
         assert_eq!(worktrees.len(), 1);
         worktrees.pop().unwrap()
     });
@@ -6597,9 +6559,7 @@ async fn test_range_format_during_save(cx: &mut gpui::TestAppContext) {
 #[gpui::test]
 async fn test_document_format_manual_trigger(cx: &mut gpui::TestAppContext) {
     init_test(cx, |settings| {
-        settings.defaults.formatter = Some(language_settings::SelectedFormatter::List(
-            FormatterList(vec![Formatter::LanguageServer { name: None }].into()),
-        ))
+        settings.defaults.formatter = Some(language_settings::Formatter::LanguageServer)
     });
 
     let fs = FakeFs::new(cx.executor());
@@ -6760,7 +6720,7 @@ async fn test_concurrent_format_requests(cx: &mut gpui::TestAppContext) {
 #[gpui::test]
 async fn test_strip_whitespace_and_format_via_lsp(cx: &mut gpui::TestAppContext) {
     init_test(cx, |settings| {
-        settings.defaults.formatter = Some(language_settings::SelectedFormatter::Auto)
+        settings.defaults.formatter = Some(language_settings::Formatter::Auto)
     });
 
     let mut cx = EditorLspTestContext::new_rust(
@@ -8211,13 +8171,11 @@ async fn test_toggle_block_comment(cx: &mut gpui::TestAppContext) {
     );
     cx.executor().run_until_parked();
     cx.update_editor(|editor, cx| editor.toggle_comments(&ToggleComments::default(), cx));
-    // TODO this is how it actually worked in Zed Stable, which is not very ergonomic.
-    // Uncommenting and commenting from this position brings in even more wrong artifacts.
     cx.assert_editor_state(
         &r#"
             <!-- ˇ<script> -->
                 // ˇvar x = new Y();
-            // ˇ</script>
+            <!-- ˇ</script> -->
         "#
         .unindent(),
     );
@@ -9359,7 +9317,7 @@ async fn test_on_type_formatting_not_triggered(cx: &mut gpui::TestAppContext) {
     let worktree_id = workspace
         .update(cx, |workspace, cx| {
             workspace.project().update(cx, |project, cx| {
-                project.worktrees(cx).next().unwrap().read(cx).id()
+                project.worktrees().next().unwrap().read(cx).id()
             })
         })
         .unwrap();
@@ -9765,9 +9723,7 @@ async fn test_completions_in_languages_with_extra_word_characters(cx: &mut gpui:
 #[gpui::test]
 async fn test_document_format_with_prettier(cx: &mut gpui::TestAppContext) {
     init_test(cx, |settings| {
-        settings.defaults.formatter = Some(language_settings::SelectedFormatter::List(
-            FormatterList(vec![Formatter::Prettier].into()),
-        ))
+        settings.defaults.formatter = Some(language_settings::Formatter::Prettier)
     });
 
     let fs = FakeFs::new(cx.executor());
@@ -9827,7 +9783,7 @@ async fn test_document_format_with_prettier(cx: &mut gpui::TestAppContext) {
     );
 
     update_test_language_settings(cx, |settings| {
-        settings.defaults.formatter = Some(language_settings::SelectedFormatter::Auto)
+        settings.defaults.formatter = Some(language_settings::Formatter::Auto)
     });
     let format = editor.update(cx, |editor, cx| {
         editor.perform_format(project.clone(), FormatTrigger::Manual, cx)
@@ -10489,12 +10445,7 @@ async fn test_mutlibuffer_in_navigation_history(cx: &mut gpui::TestAppContext) {
                 workspace.active_item(cx).is_none(),
                 "active item should be None before the first item is added"
             );
-            workspace.add_item_to_active_pane(
-                Box::new(multi_buffer_editor.clone()),
-                None,
-                true,
-                cx,
-            );
+            workspace.add_item_to_active_pane(Box::new(multi_buffer_editor.clone()), None, cx);
             let active_item = workspace
                 .active_item(cx)
                 .expect("should have an active item after adding the multi buffer");

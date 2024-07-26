@@ -24,7 +24,7 @@ fn main() {
         cx.on_action(quit);
         // Add menu items
         cx.set_menus(vec![Menu {
-            name: "set_menus".into(),
+            name: "set_menus",
             items: vec![MenuItem::action("Quit", Quit)],
         }]);
         cx.open_window(WindowOptions::default(), |cx| {

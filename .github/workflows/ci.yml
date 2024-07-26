@@ -251,8 +251,6 @@ jobs:
           draft: true
           prerelease: ${{ env.RELEASE_CHANNEL == 'preview' }}
           files: |
-            target/zed-remote-server-macos-x86_64.gz
-            target/zed-remote-server-macos-aarch64.gz
             target/aarch64-apple-darwin/release/Zed-aarch64.dmg
             target/x86_64-apple-darwin/release/Zed-x86_64.dmg
             target/release/Zed.dmg
@@ -324,9 +322,7 @@ jobs:
         with:
           draft: true
           prerelease: ${{ env.RELEASE_CHANNEL == 'preview' }}
-          files: |
-            target/zed-remote-server-linux-x86_64.gz
-            target/release/zed-linux-x86_64.tar.gz
+          files: target/release/zed-linux-x86_64.tar.gz
           body: ""
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -409,9 +405,7 @@ jobs:
         with:
           draft: true
           prerelease: ${{ env.RELEASE_CHANNEL == 'preview' }}
-          files: |
-            target/zed-remote-server-linux-aarch64.gz
-            target/release/zed-linux-aarch64.tar.gz
+          files: target/release/zed-linux-aarch64.tar.gz
           body: ""
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

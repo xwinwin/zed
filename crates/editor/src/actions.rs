@@ -129,7 +129,7 @@ pub struct ExpandExcerptsDown {
 #[derive(PartialEq, Clone, Deserialize, Default)]
 pub struct ShowCompletions {
     #[serde(default)]
-    pub(super) trigger: Option<String>,
+    pub(super) trigger: Option<char>,
 }
 
 impl_actions!(

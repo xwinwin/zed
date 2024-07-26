@@ -1,5 +1,4 @@
 use anyhow::Result;
-use collections::HashMap;
 use gpui::AppContext;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -12,11 +11,10 @@ pub struct WorkspaceSettings {
     pub confirm_quit: bool,
     pub show_call_status_icon: bool,
     pub autosave: AutosaveSetting,
-    pub restore_on_startup: RestoreOnStartupBehavior,
+    pub restore_on_startup: RestoreOnStartupBehaviour,
     pub drop_target_size: f32,
     pub when_closing_with_no_tabs: CloseWindowWhenNoItems,
     pub use_system_path_prompts: bool,
-    pub command_aliases: HashMap<String, String>,
 }
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize, JsonSchema)]
@@ -43,14 +41,12 @@ impl CloseWindowWhenNoItems {
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum RestoreOnStartupBehavior {
+pub enum RestoreOnStartupBehaviour {
     /// Always start with an empty editor
     None,
     /// Restore the workspace that was closed last.
-    LastWorkspace,
-    /// Restore all workspaces that were open when quitting Zed.
     #[default]
-    LastSession,
+    LastWorkspace,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize, JsonSchema)]
@@ -76,9 +72,9 @@ pub struct WorkspaceSettingsContent {
     /// Default: off
     pub autosave: Option<AutosaveSetting>,
     /// Controls previous session restoration in freshly launched Zed instance.
-    /// Values: none, last_workspace, last_session
-    /// Default: last_session
-    pub restore_on_startup: Option<RestoreOnStartupBehavior>,
+    /// Values: none, last_workspace
+    /// Default: last_workspace
+    pub restore_on_startup: Option<RestoreOnStartupBehaviour>,
     /// The size of the workspace split drop targets on the outer edges.
     /// Given as a fraction that will be multiplied by the smaller dimension of the workspace.
     ///
@@ -93,11 +89,6 @@ pub struct WorkspaceSettingsContent {
     ///
     /// Default: true
     pub use_system_path_prompts: Option<bool>,
-    /// Aliases for the command palette. When you type a key in this map,
-    /// it will be assumed to equal the value.
-    ///
-    /// Default: true
-    pub command_aliases: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize)]

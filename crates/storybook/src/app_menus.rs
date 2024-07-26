@@ -1,10 +1,10 @@
 use gpui::{Menu, MenuItem};
 
-pub fn app_menus() -> Vec<Menu> {
+pub fn app_menus() -> Vec<Menu<'static>> {
     use crate::actions::Quit;
 
     vec![Menu {
-        name: "Storybook".into(),
+        name: "Storybook",
         items: vec![MenuItem::action("Quit", Quit)],
     }]
 }

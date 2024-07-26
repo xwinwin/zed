@@ -127,12 +127,11 @@ impl NotificationPanel {
                 },
             ));
 
-            let local_offset = chrono::Local::now().offset().local_minus_utc();
             let mut this = Self {
                 fs,
                 client,
                 user_store,
-                local_timezone: UtcOffset::from_whole_seconds(local_offset).unwrap(),
+                local_timezone: cx.local_timezone(),
                 channel_store: ChannelStore::global(cx),
                 notification_store: NotificationStore::global(cx),
                 notification_list,
@@ -672,7 +671,7 @@ impl Panel for NotificationPanel {
         settings::update_settings_file::<NotificationPanelSettings>(
             self.fs.clone(),
             cx,
-            move |settings, _| settings.dock = Some(position),
+            move |settings| settings.dock = Some(position),
         );
     }
 

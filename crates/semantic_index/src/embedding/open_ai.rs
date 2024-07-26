@@ -1,7 +1,7 @@
 use crate::{Embedding, EmbeddingProvider, TextToEmbed};
 use anyhow::Result;
 use futures::{future::BoxFuture, FutureExt};
-use http_client::HttpClient;
+use http::HttpClient;
 pub use open_ai::OpenAiEmbeddingModel;
 use std::sync::Arc;
 

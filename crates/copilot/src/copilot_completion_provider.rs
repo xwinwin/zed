@@ -8,7 +8,7 @@ use language::{
     Buffer, OffsetRangeExt, ToOffset,
 };
 use settings::Settings;
-use std::{ops::Range, path::Path, sync::Arc, time::Duration};
+use std::{path::Path, sync::Arc, time::Duration};
 
 pub const COPILOT_DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(75);
 
@@ -239,7 +239,7 @@ impl InlineCompletionProvider for CopilotCompletionProvider {
         buffer: &Model<Buffer>,
         cursor_position: language::Anchor,
         cx: &'a AppContext,
-    ) -> Option<(&'a str, Option<Range<language::Anchor>>)> {
+    ) -> Option<&'a str> {
         let buffer_id = buffer.entity_id();
         let buffer = buffer.read(cx);
         let completion = self.active_completion()?;
@@ -269,7 +269,7 @@ impl InlineCompletionProvider for CopilotCompletionProvider {
             if completion_text.trim().is_empty() {
                 None
             } else {
-                Some((completion_text, None))
+                Some(completion_text)
             }
         } else {
             None

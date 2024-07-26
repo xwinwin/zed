@@ -24,7 +24,7 @@ test-support = [
 ]
 
 [dependencies]
-aho-corasick.workspace = true
+aho-corasick = "1.1"
 anyhow.workspace = true
 async-trait.workspace = true
 client.workspace = true
@@ -37,7 +37,7 @@ fuzzy.workspace = true
 git.workspace = true
 globset.workspace = true
 gpui.workspace = true
-http_client.workspace = true
+http.workspace = true
 itertools.workspace = true
 language.workspace = true
 log.workspace = true
@@ -51,7 +51,6 @@ prettier.workspace = true
 worktree.workspace = true
 rand.workspace = true
 regex.workspace = true
-remote.workspace = true
 rpc.workspace = true
 schemars.workspace = true
 task.workspace = true

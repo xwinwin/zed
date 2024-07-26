@@ -111,7 +111,6 @@ impl ChatPanel {
                 this.is_scrolled_to_bottom = !event.is_scrolled;
             }));
 
-            let local_offset = chrono::Local::now().offset().local_minus_utc();
             let mut this = Self {
                 fs,
                 client,
@@ -121,7 +120,7 @@ impl ChatPanel {
                 active_chat: Default::default(),
                 pending_serialization: Task::ready(None),
                 message_editor: input_editor,
-                local_timezone: UtcOffset::from_whole_seconds(local_offset).unwrap(),
+                local_timezone: cx.local_timezone(),
                 subscriptions: Vec::new(),
                 is_scrolled_to_bottom: true,
                 active: false,
@@ -1107,11 +1106,9 @@ impl Panel for ChatPanel {
     }
 
     fn set_position(&mut self, position: DockPosition, cx: &mut ViewContext<Self>) {
-        settings::update_settings_file::<ChatPanelSettings>(
-            self.fs.clone(),
-            cx,
-            move |settings, _| settings.dock = Some(position),
-        );
+        settings::update_settings_file::<ChatPanelSettings>(self.fs.clone(), cx, move |settings| {
+            settings.dock = Some(position)
+        });
     }
 
     fn size(&self, cx: &gpui::WindowContext) -> Pixels {

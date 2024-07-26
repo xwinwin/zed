@@ -464,12 +464,15 @@ impl ProjectPanel {
             let is_remote = project.is_remote() && project.dev_server_project_id().is_none();
 
             let context_menu = ContextMenu::build(cx, |menu, cx| {
-                menu.context(self.focus_handle.clone()).map(|menu| {
-                    if is_read_only {
-                        menu.when(is_dir, |menu| {
-                            menu.action("Search Inside", Box::new(NewSearchInDirectory))
-                        })
-                    } else {
+                menu.context(self.focus_handle.clone()).when_else(
+                    is_read_only,
+                    |menu| {
+                        menu.action("Copy Relative Path", Box::new(CopyRelativePath))
+                            .when(is_dir, |menu| {
+                                menu.action("Search Inside", Box::new(NewSearchInDirectory))
+                            })
+                    },
+                    |menu| {
                         menu.action("New File", Box::new(NewFile))
                             .action("New Folder", Box::new(NewDirectory))
                             .separator()
@@ -542,8 +545,8 @@ impl ProjectPanel {
                                 menu.separator()
                                     .action("Collapse All", Box::new(CollapseAllEntries))
                             })
-                    }
-                })
+                    },
+                )
             });
 
             cx.focus_view(&context_menu);
@@ -651,7 +654,7 @@ impl ProjectPanel {
 
     pub fn collapse_all_entries(&mut self, _: &CollapseAllEntries, cx: &mut ViewContext<Self>) {
         // By keeping entries for fully collapsed worktrees, we avoid expanding them within update_visible_entries
-        // (which is it's default behavior when there's no entry for a worktree in expanded_dir_ids).
+        // (which is it's default behaviour when there's no entry for a worktree in expanded_dir_ids).
         self.expanded_dir_ids
             .retain(|_, expanded_entries| expanded_entries.is_empty());
         self.update_visible_entries(None, cx);
@@ -1304,8 +1307,6 @@ impl ProjectPanel {
                 .as_ref()
                 .filter(|clipboard| !clipboard.items().is_empty())?;
 
-            let mut tasks = Vec::new();
-
             for clipboard_entry in clipboard_entries.items() {
                 if clipboard_entry.worktree_id != worktree_id {
                     return None;
@@ -1317,34 +1318,15 @@ impl ProjectPanel {
                         .update(cx, |project, cx| {
                             project.rename_entry(clipboard_entry.entry_id, new_path, cx)
                         })
-                        .detach_and_log_err(cx);
+                        .detach_and_log_err(cx)
                 } else {
-                    let task = self.project.update(cx, |project, cx| {
-                        project.copy_entry(clipboard_entry.entry_id, new_path, cx)
-                    });
-                    tasks.push(task);
+                    self.project
+                        .update(cx, |project, cx| {
+                            project.copy_entry(clipboard_entry.entry_id, new_path, cx)
+                        })
+                        .detach_and_log_err(cx)
                 }
             }
-
-            cx.spawn(|project_panel, mut cx| async move {
-                let entry_ids = futures::future::join_all(tasks).await;
-                if let Some(Some(entry)) = entry_ids
-                    .into_iter()
-                    .rev()
-                    .find_map(|entry_id| entry_id.ok())
-                {
-                    project_panel
-                        .update(&mut cx, |project_panel, _cx| {
-                            project_panel.selection = Some(SelectedEntry {
-                                worktree_id,
-                                entry_id: entry.id,
-                            });
-                        })
-                        .ok();
-                }
-            })
-            .detach();
-
             self.expand_entry(worktree_id, entry.id, cx);
             Some(())
         });
@@ -2569,7 +2551,7 @@ impl Panel for ProjectPanel {
         settings::update_settings_file::<ProjectPanelSettings>(
             self.fs.clone(),
             cx,
-            move |settings, _| {
+            move |settings| {
                 let dock = match position {
                     DockPosition::Left | DockPosition::Bottom => ProjectPanelDockPosition::Left,
                     DockPosition::Right => ProjectPanelDockPosition::Right,
@@ -3597,8 +3579,8 @@ mod tests {
             &[
                 //
                 "v root1",
-                "      one.two copy.txt  <== selected",
-                "      one.two.txt",
+                "      one.two copy.txt",
+                "      one.two.txt  <== selected",
                 "      one.txt",
             ]
         );
@@ -3613,9 +3595,9 @@ mod tests {
             &[
                 //
                 "v root1",
-                "      one.two copy 1.txt  <== selected",
+                "      one.two copy 1.txt",
                 "      one.two copy.txt",
-                "      one.two.txt",
+                "      one.two.txt  <== selected",
                 "      one.txt",
             ]
         );
@@ -3700,13 +3682,10 @@ mod tests {
             visible_entries_as_strings(&panel, 0..50, cx),
             &[
                 //
-                "v root",
+                "v root  <== selected",
                 "    > a",
-                "    v a copy",
-                "        > a  <== selected",
-                "        > inner_dir",
-                "          one.txt",
-                "          two.txt",
+                "    > a copy",
+                "    > a copy 1",
                 "    v b",
                 "        v a",
                 "            v inner_dir",
@@ -4170,7 +4149,7 @@ mod tests {
 
         let project = Project::test(fs.clone(), ["/project_root".as_ref()], cx).await;
         let worktree_id =
-            cx.update(|cx| project.read(cx).worktrees(cx).next().unwrap().read(cx).id());
+            cx.update(|cx| project.read(cx).worktrees().next().unwrap().read(cx).id());
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
@@ -4966,7 +4945,7 @@ mod tests {
     ) {
         let path = path.as_ref();
         panel.update(cx, |panel, cx| {
-            for worktree in panel.project.read(cx).worktrees(cx).collect::<Vec<_>>() {
+            for worktree in panel.project.read(cx).worktrees().collect::<Vec<_>>() {
                 let worktree = worktree.read(cx);
                 if let Ok(relative_path) = path.strip_prefix(worktree.root_name()) {
                     let entry_id = worktree.entry_for_path(relative_path).unwrap().id;
@@ -4981,7 +4960,7 @@ mod tests {
     fn select_path(panel: &View<ProjectPanel>, path: impl AsRef<Path>, cx: &mut VisualTestContext) {
         let path = path.as_ref();
         panel.update(cx, |panel, cx| {
-            for worktree in panel.project.read(cx).worktrees(cx).collect::<Vec<_>>() {
+            for worktree in panel.project.read(cx).worktrees().collect::<Vec<_>>() {
                 let worktree = worktree.read(cx);
                 if let Ok(relative_path) = path.strip_prefix(worktree.root_name()) {
                     let entry_id = worktree.entry_for_path(relative_path).unwrap().id;
@@ -5003,7 +4982,7 @@ mod tests {
     ) -> Option<ProjectEntryId> {
         let path = path.as_ref();
         panel.update(cx, |panel, cx| {
-            for worktree in panel.project.read(cx).worktrees(cx).collect::<Vec<_>>() {
+            for worktree in panel.project.read(cx).worktrees().collect::<Vec<_>>() {
                 let worktree = worktree.read(cx);
                 if let Ok(relative_path) = path.strip_prefix(worktree.root_name()) {
                     return worktree.entry_for_path(relative_path).map(|entry| entry.id);

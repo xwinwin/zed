@@ -8,7 +8,7 @@ impl RenderOnce for ListSeparator {
         div()
             .h_px()
             .w_full()
-            .my_1p5()
+            .my_1()
             .bg(cx.theme().colors().border_variant)
     }
 }

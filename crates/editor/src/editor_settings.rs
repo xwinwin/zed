@@ -28,6 +28,7 @@ pub struct EditorSettings {
     pub search_wrap: bool,
     pub auto_signature_help: bool,
     pub show_signature_help_after_edits: bool,
+    #[serde(default)]
     pub jupyter: Jupyter,
 }
 
@@ -68,21 +69,13 @@ pub enum DoubleClickInMultibuffer {
     Open,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Jupyter {
     /// Whether the Jupyter feature is enabled.
     ///
-    /// Default: true
+    /// Default: `false`
     pub enabled: bool,
-}
-
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct JupyterContent {
-    /// Whether the Jupyter feature is enabled.
-    ///
-    /// Default: true
-    pub enabled: Option<bool>,
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -254,7 +247,7 @@ pub struct EditorSettingsContent {
     pub show_signature_help_after_edits: Option<bool>,
 
     /// Jupyter REPL settings.
-    pub jupyter: Option<JupyterContent>,
+    pub jupyter: Option<Jupyter>,
 }
 
 // Toolbar related settings
@@ -323,12 +316,6 @@ pub struct GutterContent {
     ///
     /// Default: true
     pub folds: Option<bool>,
-}
-
-impl EditorSettings {
-    pub fn jupyter_enabled(cx: &AppContext) -> bool {
-        EditorSettings::get_global(cx).jupyter.enabled
-    }
 }
 
 impl Settings for EditorSettings {

@@ -2,18 +2,18 @@ use collab_ui::collab_panel;
 use gpui::{Menu, MenuItem, OsAction};
 use terminal_view::terminal_panel;
 
-pub fn app_menus() -> Vec<Menu> {
+pub fn app_menus() -> Vec<Menu<'static>> {
     use zed_actions::Quit;
 
     vec![
         Menu {
-            name: "Zed".into(),
+            name: "Zed",
             items: vec![
                 MenuItem::action("About Zed…", zed_actions::About),
                 MenuItem::action("Check for Updates", auto_update::Check),
                 MenuItem::separator(),
                 MenuItem::submenu(Menu {
-                    name: "Preferences".into(),
+                    name: "Preferences",
                     items: vec![
                         MenuItem::action("Open Settings", super::OpenSettings),
                         MenuItem::action("Open Key Bindings", zed_actions::OpenKeymap),
@@ -33,7 +33,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "File".into(),
+            name: "File",
             items: vec![
                 MenuItem::action("New", workspace::NewFile),
                 MenuItem::action("New Window", workspace::NewWindow),
@@ -58,7 +58,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "Edit".into(),
+            name: "Edit",
             items: vec![
                 MenuItem::os_action("Undo", editor::actions::Undo, OsAction::Undo),
                 MenuItem::os_action("Redo", editor::actions::Redo, OsAction::Redo),
@@ -77,7 +77,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "Selection".into(),
+            name: "Selection",
             items: vec![
                 MenuItem::os_action(
                     "Select All",
@@ -102,7 +102,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "View".into(),
+            name: "View",
             items: vec![
                 MenuItem::action("Zoom In", zed_actions::IncreaseBufferFontSize),
                 MenuItem::action("Zoom Out", zed_actions::DecreaseBufferFontSize),
@@ -113,7 +113,7 @@ pub fn app_menus() -> Vec<Menu> {
                 MenuItem::action("Toggle Bottom Dock", workspace::ToggleBottomDock),
                 MenuItem::action("Close All Docks", workspace::CloseAllDocks),
                 MenuItem::submenu(Menu {
-                    name: "Editor Layout".into(),
+                    name: "Editor Layout",
                     items: vec![
                         MenuItem::action("Split Up", workspace::SplitUp),
                         MenuItem::action("Split Down", workspace::SplitDown),
@@ -132,7 +132,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "Go".into(),
+            name: "Go",
             items: vec![
                 MenuItem::action("Back", workspace::GoBack),
                 MenuItem::action("Forward", workspace::GoForward),
@@ -153,7 +153,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "Window".into(),
+            name: "Window",
             items: vec![
                 MenuItem::action("Minimize", super::Minimize),
                 MenuItem::action("Zoom", super::Zoom),
@@ -161,7 +161,7 @@ pub fn app_menus() -> Vec<Menu> {
             ],
         },
         Menu {
-            name: "Help".into(),
+            name: "Help",
             items: vec![
                 MenuItem::action("View Telemetry", zed_actions::OpenTelemetryLog),
                 MenuItem::action("View Dependency Licenses", zed_actions::OpenLicenses),

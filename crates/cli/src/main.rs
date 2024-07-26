@@ -129,7 +129,6 @@ fn main() -> Result<()> {
             || path.starts_with("http://")
             || path.starts_with("https://")
             || path.starts_with("file://")
-            || path.starts_with("ssh://")
         {
             urls.push(path.to_string());
         } else {
