@@ -1,5 +1,5 @@
 [package]
-name = "multi_buffer"
+name = "multi_buffer_2"
 version = "0.1.0"
 edition = "2021"
 publish = false

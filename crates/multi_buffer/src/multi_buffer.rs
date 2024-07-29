@@ -75,31 +75,15 @@ pub struct MultiBuffer {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Event {
-    ExcerptsAdded {
-        buffer: Model<Buffer>,
-        predecessor: ExcerptId,
-        excerpts: Vec<(ExcerptId, ExcerptRange<language::Anchor>)>,
-    },
-    ExcerptsRemoved {
-        ids: Vec<ExcerptId>,
-    },
-    ExcerptsExpanded {
-        ids: Vec<ExcerptId>,
-    },
-    ExcerptsEdited {
-        ids: Vec<ExcerptId>,
-    },
-    Edited {
-        singleton_buffer_edited: bool,
-    },
-    TransactionUndone {
-        transaction_id: TransactionId,
-    },
+    ExcerptsAdded(Vec<ExcerptId>),
+    ExcerptsRemoved(Vec<ExcerptId>),
+    ExcerptsExpanded(Vec<ExcerptId>),
+    ExcerptsEdited(Vec<ExcerptId>),
+    Edited { singleton_buffer_edited: bool },
+    TransactionUndone { transaction_id: TransactionId },
     Reloaded,
     DiffBaseChanged,
-    DiffUpdated {
-        buffer: Model<Buffer>,
-    },
+    DiffUpdated { buffer: Model<Buffer> },
     LanguageChanged(BufferId),
     CapabilityChanged,
     Reparsed(BufferId),

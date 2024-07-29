@@ -63,6 +63,7 @@ members = [
     "crates/media",
     "crates/menu",
     "crates/multi_buffer",
+    "crates/multi_buffer_2",
     "crates/node_runtime",
     "crates/notifications",
     "crates/ollama",
@@ -236,6 +237,7 @@ markdown_preview = { path = "crates/markdown_preview" }
 media = { path = "crates/media" }
 menu = { path = "crates/menu" }
 multi_buffer = { path = "crates/multi_buffer" }
+multi_buffer_2 = { path = "crates/multi_buffer_2" }
 node_runtime = { path = "crates/node_runtime" }
 notifications = { path = "crates/notifications" }
 ollama = { path = "crates/ollama" }
