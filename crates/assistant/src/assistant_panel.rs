@@ -81,6 +81,13 @@ use workspace::{
 };
 use workspace::{searchable::SearchableItemHandle, NewFile};
 
+pub const NOT_REAL_PROVIDER_AGREEMENTS: &[(&str, &str)] = &[
+    ("OpenAI ToS", "https://platform.openai.com/terms"),
+    ("Anthropic ToS", "https://www.anthropic.com/terms"),
+    ("Zed ToS", "https://zed.dev/tos"),
+    ("Zed Privacy Policy", "https://zed.dev/privacy"),
+];
+
 pub fn init(cx: &mut AppContext) {
     workspace::FollowableViewRegistry::register::<ContextEditor>(cx);
     cx.observe_new_views(
@@ -2515,6 +2522,8 @@ impl EventEmitter<SearchEvent> for ContextEditor {}
 
 impl Render for ContextEditor {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        let TEMP_AGREED_TO_TOS_ETC = false;
+
         div()
             .key_context("ContextEditor")
             .capture_action(cx.listener(ContextEditor::cancel_last_assist))
@@ -2527,6 +2536,42 @@ impl Render for ContextEditor {
             .on_action(cx.listener(ContextEditor::debug_edit_steps))
             .size_full()
             .v_flex()
+            .child(
+                div().max_w(px(500.)).m_3().child(
+                v_flex().bg(cx.theme().colors().elevated_surface_background).border_1().border_color(cx.theme().colors().border_variant).rounded_lg().p_3().gap_2()
+                    .child(
+                        Headline::new("Terms & Conditions").size(HeadlineSize::Small),
+                    )
+                    .child(
+                        Label::new(
+                            "Please read and accept the terms and conditions for Zed AI and our provider partners to continue.",
+                        )
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                    )
+                    .children(NOT_REAL_PROVIDER_AGREEMENTS.iter().map(|agreement| {
+                        div().child(
+                            Button::new("tos-agreement", agreement.0)
+                                .on_click(move |_, cx| cx.open_url(agreement.1))
+                        )
+                    }))
+                    .child(
+                    h_flex()
+                        .gap_2()
+                        .justify_end()
+                        .child(
+                            Button::new("decline-tos", "Disable Zed AI")
+                                .color(Color::Muted)
+                                .on_click(|_, _| {}),
+                        )
+                        .child(
+                            Button::new("accept-tos", "Accept")
+                                .style(ButtonStyle::Filled)
+                                .layer(ElevationIndex::ModalSurface)
+                                .on_click(|_, _| {}),
+                        )
+                )),
+            )
             .child(
                 div()
                     .flex_grow()
