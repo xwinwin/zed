@@ -8,6 +8,7 @@ use crate::{
         SlashCommandCompletionProvider, SlashCommandRegistry,
     },
     terminal_inline_assistant::TerminalInlineAssistant,
+    zed_pro::TRY_ZED_PRO_URL,
     Assist, ConfirmCommand, Context, ContextEvent, ContextId, ContextStore, CycleMessageRole,
     DebugEditSteps, DeployHistory, DeployPromptLibrary, EditSuggestionGroup, InlineAssist,
     InlineAssistId, InlineAssistant, InsertIntoEditor, MessageStatus, ModelSelector,
@@ -80,6 +81,8 @@ use workspace::{
     Pane, Save, ToggleZoom, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView, Workspace,
 };
 use workspace::{searchable::SearchableItemHandle, NewFile};
+
+pub const TRY_ZED_PRO_URL: &str = "https://www.zed.dev/pro";
 
 pub fn init(cx: &mut AppContext) {
     workspace::FollowableViewRegistry::register::<ContextEditor>(cx);
@@ -2348,37 +2351,51 @@ impl ContextEditor {
             .upgrade()
             .map(|assistant_panel| assistant_panel.read(cx).show_zed_ai_notice);
 
+        let nudge_text =
+            "Sign in to use AI in Zed for free, and try Zed Pro for high speed, up to date models.";
+
         if let Some(error) = self.error_message.clone() {
             Some(Self::render_error_popover(error, cx).into_any_element())
         } else if nudge.unwrap_or(false) {
             Some(
                 v_flex()
                     .elevation_3(cx)
-                    .p_2()
+                    .p_3()
                     .gap_2()
                     .child(
-                        Label::new("Use Zed AI")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted),
+                        v_flex()
+                            .gap_1()
+                            .child(
+                                Label::new("Zed AI")
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .child(Label::new(nudge_text)),
                     )
-                    .child(h_flex().justify_end().child(
-                        Button::new("sign-in", "Sign in to use Zed AI").on_click(cx.listener(
-                            |this, _event, cx| {
-                                let client = this
-                                    .workspace
-                                    .update(cx, |workspace, _| workspace.client().clone())
-                                    .log_err();
+                    .child(
+                        h_flex()
+                            .justify_end()
+                            .child(
+                                Button::new("try-pro", "Try Zed Pro")
+                                    .on_click(|_, cx| cx.open_url(TRY_ZED_PRO_URL)),
+                            )
+                            .child(Button::new("sign-in", "Sign In").on_click(cx.listener(
+                                |this, _event, cx| {
+                                    let client = this
+                                        .workspace
+                                        .update(cx, |workspace, _| workspace.client().clone())
+                                        .log_err();
 
-                                if let Some(client) = client {
-                                    cx.spawn(|this, mut cx| async move {
-                                        client.authenticate_and_connect(true, &mut cx).await?;
-                                        this.update(&mut cx, |_, cx| cx.notify())
-                                    })
-                                    .detach_and_log_err(cx)
-                                }
-                            },
-                        )),
-                    ))
+                                    if let Some(client) = client {
+                                        cx.spawn(|this, mut cx| async move {
+                                            client.authenticate_and_connect(true, &mut cx).await?;
+                                            this.update(&mut cx, |_, cx| cx.notify())
+                                        })
+                                        .detach_and_log_err(cx)
+                                    }
+                                },
+                            ))),
+                    )
                     .into_any_element(),
             )
         } else if let Some(configuration_error) = configuration_error(cx) {
