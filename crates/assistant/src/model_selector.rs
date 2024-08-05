@@ -4,6 +4,7 @@ use proto::Plan;
 use std::sync::Arc;
 use ui::ListItemSpacing;
 
+use crate::assistant_panel::TRY_ZED_PRO_URL;
 use crate::assistant_settings::AssistantSettings;
 use crate::ShowConfiguration;
 use fs::Fs;
@@ -13,8 +14,6 @@ use gpui::Task;
 use picker::{Picker, PickerDelegate};
 use settings::update_settings_file;
 use ui::{prelude::*, ListItem, PopoverMenu, PopoverMenuHandle, PopoverTrigger};
-
-const TRY_ZED_PRO_URL: &str = "https://zed.dev/pro";
 
 #[derive(IntoElement)]
 pub struct ModelSelector<T: PopoverTrigger> {
