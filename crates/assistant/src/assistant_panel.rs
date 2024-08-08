@@ -390,7 +390,16 @@ impl AssistantPanel {
                             .on_click(
                                 cx.listener(|_, _, cx| cx.dispatch_action(NewFile.boxed_clone())),
                             )
-                            .tooltip(|cx| Tooltip::for_action("New Context", &NewFile, cx)),
+                            .tooltip(|cx| Tooltip::for_action("New", &NewFile, cx)),
+                    )
+                    .child(
+                        IconButton::new("manage-prompts", IconName::Library)
+                            .on_click(cx.listener(|_, _, cx| {
+                                cx.dispatch_action(DeployPromptLibrary.boxed_clone())
+                            }))
+                            .tooltip(|cx| {
+                                Tooltip::for_action("Manage Prompts", &DeployPromptLibrary, cx)
+                            }),
                     )
                     .child(
                         IconButton::new("menu", IconName::Ellipsis)
@@ -403,11 +412,14 @@ impl AssistantPanel {
                                 };
                                 let menu = ContextMenu::build(cx, |menu, cx| {
                                     menu.context(pane.focus_handle(cx))
-                                        .action("New Context", Box::new(NewFile))
-                                        .action("History", Box::new(DeployHistory))
-                                        .action("Prompt Library", Box::new(DeployPromptLibrary))
-                                        .action("Configure", Box::new(ShowConfiguration))
+                                        .action("New", Box::new(NewFile))
+                                        .separator()
                                         .action(zoom_label, Box::new(ToggleZoom))
+                                        .separator()
+                                        .action("Prompt Library", Box::new(DeployPromptLibrary))
+                                        .action("Past Contexts", Box::new(DeployHistory))
+                                        .separator()
+                                        .action("Configure Assistant", Box::new(ShowConfiguration))
                                 });
                                 cx.subscribe(&menu, |pane, _, _: &DismissEvent, _| {
                                     pane.new_item_menu = None;
