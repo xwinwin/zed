@@ -363,7 +363,7 @@ impl AssistantPanel {
             pane.set_should_display_tab_bar(|_| true);
             pane.set_render_tab_bar_buttons(cx, move |pane, cx| {
                 let focus_handle = pane.focus_handle(cx);
-                let left_children = IconButton::new("history", IconName::TextSearch)
+                let left_children = IconButton::new("history", IconName::History)
                     .on_click(cx.listener({
                         let focus_handle = focus_handle.clone();
                         move |_, _, cx| {
@@ -393,7 +393,7 @@ impl AssistantPanel {
                             .tooltip(|cx| Tooltip::for_action("New Context", &NewFile, cx)),
                     )
                     .child(
-                        IconButton::new("menu", IconName::Menu)
+                        IconButton::new("menu", IconName::Ellipsis)
                             .icon_size(IconSize::Small)
                             .on_click(cx.listener(|pane, _, cx| {
                                 let zoom_label = if pane.is_zoomed() {
@@ -3542,9 +3542,11 @@ impl ContextEditorToolbarItem {
         let active_context_editor = self.active_context_editor.clone();
 
         PopoverMenu::new("inject-context-menu")
-            .trigger(IconButton::new("trigger", IconName::Quote).tooltip(|cx| {
-                Tooltip::with_meta("Insert Context", None, "Type / to insert via keyboard", cx)
-            }))
+            .trigger(
+                IconButton::new("trigger", IconName::SlashSquare).tooltip(|cx| {
+                    Tooltip::with_meta("Insert Context", None, "Type / to insert via keyboard", cx)
+                }),
+            )
             .menu(move |cx| {
                 let active_context_editor = active_context_editor.clone()?;
                 ContextMenu::build(cx, |mut menu, _cx| {
