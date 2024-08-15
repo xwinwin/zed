@@ -9614,7 +9614,6 @@ impl Editor {
                                 }
                             }),
                             disposition: BlockDisposition::Below,
-                            priority: 0,
                         }],
                         Some(Autoscroll::fit()),
                         cx,
@@ -9878,7 +9877,6 @@ impl Editor {
                             height: message_height,
                             render: diagnostic_block_renderer(diagnostic, None, true, true),
                             disposition: BlockDisposition::Below,
-                            priority: 0,
                         }
                     }),
                     cx,
@@ -10184,7 +10182,6 @@ impl Editor {
         if let Some(autoscroll) = autoscroll {
             self.request_autoscroll(autoscroll, cx);
         }
-        cx.notify();
         blocks
     }
 
@@ -10199,7 +10196,6 @@ impl Editor {
         if let Some(autoscroll) = autoscroll {
             self.request_autoscroll(autoscroll, cx);
         }
-        cx.notify();
     }
 
     pub fn replace_blocks(
@@ -10212,8 +10208,9 @@ impl Editor {
             .update(cx, |display_map, _cx| display_map.replace_blocks(renderers));
         if let Some(autoscroll) = autoscroll {
             self.request_autoscroll(autoscroll, cx);
+        } else {
+            cx.notify();
         }
-        cx.notify();
     }
 
     pub fn remove_blocks(
@@ -10228,7 +10225,6 @@ impl Editor {
         if let Some(autoscroll) = autoscroll {
             self.request_autoscroll(autoscroll, cx);
         }
-        cx.notify();
     }
 
     pub fn row_for_block(

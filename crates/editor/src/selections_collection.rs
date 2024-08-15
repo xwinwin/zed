@@ -393,7 +393,7 @@ impl<'a> MutableSelectionsCollection<'a> {
         self.collection.display_map(self.cx)
     }
 
-    pub fn buffer(&self) -> Ref<MultiBufferSnapshot> {
+    fn buffer(&self) -> Ref<MultiBufferSnapshot> {
         self.collection.buffer(self.cx)
     }
 

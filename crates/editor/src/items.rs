@@ -894,10 +894,6 @@ impl Item for Editor {
             _ => {}
         }
     }
-
-    fn preserve_preview(&self, cx: &AppContext) -> bool {
-        self.buffer.read(cx).preserve_preview(cx)
-    }
 }
 
 impl SerializableItem for Editor {

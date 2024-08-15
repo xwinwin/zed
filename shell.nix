@@ -52,6 +52,5 @@ else
           "assets/fonts/zed-sans"
         ];
       };
-      PROTOC = "${pkgs.protobuf}/bin/protoc";
     };
   }

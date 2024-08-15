@@ -1,13 +1,9 @@
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, EnumString};
 
 pub const EXPIRED_LLM_TOKEN_HEADER_NAME: &str = "x-zed-expired-token";
 
-#[derive(
-    Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, EnumString, EnumIter, Display,
-)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
 pub enum LanguageModelProvider {
     Anthropic,
     OpenAi,

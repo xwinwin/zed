@@ -1,5 +1,4 @@
 use feature_flags::ZedPro;
-use gpui::DismissEvent;
 use language_model::{LanguageModel, LanguageModelAvailability, LanguageModelRegistry};
 use proto::Plan;
 
@@ -133,8 +132,6 @@ impl PickerDelegate for ModelPickerDelegate {
                 model.is_selected = model.model.id() == selected_model_id
                     && model.model.provider_id() == selected_provider_id;
             }
-
-            cx.emit(DismissEvent);
         }
     }
 

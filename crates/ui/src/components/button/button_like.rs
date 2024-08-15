@@ -50,7 +50,6 @@ pub enum TintColor {
     Accent,
     Negative,
     Warning,
-    Positive,
 }
 
 impl TintColor {
@@ -74,12 +73,6 @@ impl TintColor {
                 label_color: cx.theme().colors().text,
                 icon_color: cx.theme().colors().text,
             },
-            TintColor::Positive => ButtonLikeStyles {
-                background: cx.theme().status().success_background,
-                border_color: cx.theme().status().success_border,
-                label_color: cx.theme().colors().text,
-                icon_color: cx.theme().colors().text,
-            },
         }
     }
 }
@@ -90,7 +83,6 @@ impl From<TintColor> for Color {
             TintColor::Accent => Color::Accent,
             TintColor::Negative => Color::Error,
             TintColor::Warning => Color::Warning,
-            TintColor::Positive => Color::Success,
         }
     }
 }

@@ -52,18 +52,10 @@ async fn main() -> Result<()> {
         Some("seed") => {
             let config = envy::from_env::<Config>().expect("error loading config");
             let db_options = db::ConnectOptions::new(config.database_url.clone());
-
             let mut db = Database::new(db_options, Executor::Production).await?;
             db.initialize_notification_kinds().await?;
 
-            collab::seed::seed(&config, &db, false).await?;
-
-            if let Some(llm_database_url) = config.llm_database_url.clone() {
-                let db_options = db::ConnectOptions::new(llm_database_url);
-                let mut db = LlmDatabase::new(db_options.clone(), Executor::Production).await?;
-                db.initialize().await?;
-                collab::llm::db::seed_database(&config, &mut db, true).await?;
-            }
+            collab::seed::seed(&config, &db, true).await?;
         }
         Some("serve") => {
             let mode = match args.next().as_deref() {
@@ -287,7 +279,10 @@ async fn setup_llm_database(config: &Config) -> Result<()> {
 }
 
 async fn handle_root(Extension(mode): Extension<ServiceMode>) -> String {
-    format!("zed:{mode} v{VERSION} ({})", REVISION.unwrap_or("unknown"))
+    format!(
+        "collab {mode:?} v{VERSION} ({})",
+        REVISION.unwrap_or("unknown")
+    )
 }
 
 async fn handle_liveness_probe(
