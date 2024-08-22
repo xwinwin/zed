@@ -126,6 +126,7 @@ impl gpui::Element for ProjectPanelScrollbar {
                 move |event: &ScrollWheelEvent, phase, cx| {
                     if phase.bubble() && bounds.contains(&event.position) {
                         let scroll = scroll.0.borrow_mut();
+                        dbg!(&scroll);
                         let current_offset = scroll.base_handle.offset();
                         scroll
                             .base_handle

@@ -151,6 +151,7 @@ impl Element for UniformList {
                                         item_size.width
                                     }
                                 });
+                                dbg!(&width, &item_size);
                                 let height = match available_space.height {
                                     AvailableSpace::Definite(height) => desired_height.min(height),
                                     AvailableSpace::MinContent | AvailableSpace::MaxContent => {
@@ -200,7 +201,13 @@ impl Element for UniformList {
 
         let shared_scroll_offset = self.interactivity.scroll_offset.clone().unwrap();
 
-        let item_height = self.measure_item(Some(padded_bounds.size.width), cx).height;
+        let measurements = self.measure_item(Some(padded_bounds.size.width), cx);
+        dbg!((
+            "??? prepaint items",
+            &measurements,
+            self.measure_item(None, cx)
+        ));
+        let item_height = measurements.height;
         let shared_scroll_to_item = self.scroll_handle.as_mut().and_then(|handle| {
             let mut handle = handle.0.borrow_mut();
             handle.last_item_height = Some(item_height);
@@ -258,6 +265,13 @@ impl Element for UniformList {
                     let visible_range = first_visible_element_ix
                         ..cmp::min(last_visible_element_ix, self.item_count);
 
+                    // TODO kb isn't it slow?
+                    // let prior_items = (self.render_items)(0..visible_range.start, cx);
+                    // let following_items = (self.render_items)(visible_range.end..items.len(), cx);
+                    ////////////////////
+                    // TODO kb what if we allow to scroll to the right only if the visible items allow that?
+                    // then, always allow to scroll to the left, and keep the left scrolled offset even if the range
+                    // changes but the new items are not too long anymore
                     let mut items = (self.render_items)(visible_range.clone(), cx);
                     let content_mask = ContentMask { bounds };
                     cx.with_content_mask(Some(content_mask), |cx| {
