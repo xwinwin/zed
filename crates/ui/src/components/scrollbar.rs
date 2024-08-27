@@ -17,7 +17,9 @@ use serde::{Deserialize, Serialize};
 ///
 /// Scrollbars in Zed do not currently have arrow buttons.
 #[allow(dead_code)]
-struct Scrollbar;
+struct Scrollbar {
+    style: ScrollbarStyle,
+}
 
 /// When to show a scrollbar.
 ///
@@ -35,21 +37,72 @@ pub enum ScrollbarVisibility {
 }
 
 #[derive(Copy, Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ScrollbarStyle {
-    // The scrollbar takes up space, and offsets the content.
-    //
-    // Usually paired with
+pub enum ScrollbarDisplayStyle {
+    /// The scrollbar takes up space, and offsets the content.
+    ///
+    /// Usually paired with [ScrollbarVisibility::Always]
     #[default]
     Block,
-    // The scrollbar overlays the content. Usually with no track background to prevent obscuring content.
+    /// The scrollbar overlays the content. Usually with no track background to prevent obscuring content.
+    ///
+    /// Usually paired with [ScrollbarVisibility::OnHover]
     Overlay,
 }
 
-impl ScrollbarStyle {
-    pub fn from_visibility(visibility: ScrollbarVisibility) -> Self {
+impl From<ScrollbarVisibility> for ScrollbarDisplayStyle {
+    fn from(visibility: ScrollbarVisibility) -> Self {
         match visibility {
-            ScrollbarVisibility::OnHover => ScrollbarStyle::Overlay,
-            _ => ScrollbarStyle::Block,
+            ScrollbarVisibility::OnHover => ScrollbarDisplayStyle::Overlay,
+            _ => ScrollbarDisplayStyle::Block,
         }
     }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct ScrollbarStyle {
+    thumb: ScrollbarThumbStyle,
+    track: ScrollbarTrackStyle,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct ScrollbarThumbStyle {
+    /// The color of the thumb.
+    color: String,
+    /// The opacity of the thumb.
+    ///
+    /// Overrides the opacity of [Self::color] if set.
+    opacity: f32,
+    /// The color of the thumb when hovered.
+    ///
+    /// Overrides the color of [Self::color] and [Self::opacity]
+    /// if set and the mouse is over the thumb.
+    hover_color: String,
+    /// The opacity of the thumb when hovered.
+    ///
+    /// Overrides [Self::opacity] and the alpha of [Self::color]
+    /// if set and the mouse is over the thumb.
+    hover_opacity: f32,
+    /// The color of the thumb's border.
+    /// Setting a color will make the border visible.
+    ///
+    /// Defaults to a transparent value.
+    border_color: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct ScrollbarTrackStyle {
+    /// The color of the scrollbar track.
+    color: String,
+    /// The color of the scrollbar track's border, if one is visible.
+    /// Setting this to a fully transparent value will hide the border.
+    ///
+    /// Defaults to the theme's muted border color.
+    border_color: String,
+    /// The opacity of the scrollbar track.
+    ///
+    /// Overrides the opacity of [Self::color] if set.
+    opacity: f32,
 }
