@@ -18,14 +18,14 @@ use git::repository::GitFileStatus;
 use gpui::{
     actions, anchored, deferred, div, impl_actions, px, uniform_list, Action, AnyElement,
     AppContext, AssetSource, AsyncWindowContext, ClipboardItem, DismissEvent, Div, DragMoveEvent,
-    EventEmitter, ExternalPaths, FocusHandle, FocusableView, InteractiveElement, KeyContext,
+    EventEmitter, ExternalPaths, FocusHandle, FocusableView, Hsla, InteractiveElement, KeyContext,
     ListSizingBehavior, Model, MouseButton, MouseDownEvent, ParentElement, Pixels, Point,
     PromptLevel, Render, Stateful, Styled, Subscription, Task, UniformListScrollHandle, View,
     ViewContext, VisualContext as _, WeakView, WindowContext,
 };
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrev};
 use project::{Entry, EntryKind, Fs, Project, ProjectEntryId, ProjectPath, Worktree, WorktreeId};
-use project_panel_settings::{ProjectPanelDockPosition, ProjectPanelSettings, ShowScrollbar};
+use project_panel_settings::{ProjectPanelDockPosition, ProjectPanelSettings};
 use serde::{Deserialize, Serialize};
 use std::{
     cell::{Cell, OnceCell},
@@ -38,7 +38,10 @@ use std::{
     time::Duration,
 };
 use theme::ThemeSettings;
-use ui::{prelude::*, v_flex, ContextMenu, Icon, KeyBinding, Label, ListItem, Tooltip};
+use ui::{
+    prelude::*, v_flex, ContextMenu, Icon, KeyBinding, Label, ListItem, ScrollbarVisibility,
+    Tooltip,
+};
 use util::{maybe, ResultExt, TryFutureExt};
 use workspace::{
     dock::{DockPosition, Panel, PanelEvent},
@@ -2024,23 +2027,25 @@ impl ProjectPanel {
         details: EntryDetails,
         cx: &mut ViewContext<Self>,
     ) -> Stateful<Div> {
-        let kind = details.kind;
         let settings = ProjectPanelSettings::get_global(cx);
-        let show_editor = details.is_editing && !details.is_processing;
+        let width = self.size(cx);
+        let worktree_entry_kind = details.kind;
+        let show_rename_editor = details.is_editing && !details.is_processing;
         let selection = SelectedEntry {
             worktree_id: details.worktree_id,
             entry_id,
         };
-        let is_marked = self.marked_entries.contains(&selection);
+        let is_selected = self.marked_entries.contains(&selection);
         let is_active = self
             .selection
             .map_or(false, |selection| selection.entry_id == entry_id);
-        let width = self.size(cx);
-        let filename_text_color =
-            entry_git_aware_label_color(details.git_status, details.is_ignored, is_marked);
-        let file_name = details.filename.clone();
         let mut icon = details.icon.clone();
-        if settings.file_icons && show_editor && details.kind.is_file() {
+        let label = details.filename.clone();
+        let label_color =
+            entry_git_aware_label_color(details.git_status, details.is_ignored, is_selected);
+        let bg_color: Option<Hsla> = None;
+        let outline_color: Option<Hsla> = None;
+        if settings.file_icons && show_rename_editor && details.kind.is_file() {
             let filename = self.filename_editor.read(cx).text(cx);
             if filename.len() > 2 {
                 icon = FileIcons::get_icon(Path::new(&filename), cx);
@@ -2061,6 +2066,7 @@ impl ProjectPanel {
             active_selection: selection,
             marked_selections: selections,
         };
+
         div()
             .id(entry_id.to_proto() as usize)
             .on_drag_move::<ExternalPaths>(cx.listener(
@@ -2126,54 +2132,40 @@ impl ProjectPanel {
                 style.bg(cx.theme().colors().drop_target_background)
             })
             .on_drop(cx.listener(move |this, selections: &DraggedSelection, cx| {
-                this.drag_onto(selections, entry_id, kind.is_file(), cx);
+                this.drag_onto(selections, entry_id, worktree_entry_kind.is_file(), cx);
             }))
+            .border_1()
+            .border_r_2()
+            .rounded_none()
+            .hover(|style| {
+                if is_active {
+                    style
+                } else {
+                    let hover_color = cx.theme().colors().ghost_element_hover;
+                    style.bg(hover_color).border_color(hover_color)
+                }
+            })
+            .when(is_selected || is_active, |this| {
+                let colors = cx.theme().colors();
+                this.when(is_selected, |this| this.bg(colors.ghost_element_selected))
+                    .border_color(colors.ghost_element_selected)
+            })
+            .when(
+                is_active && self.focus_handle.contains_focused(cx),
+                |this| this.border_color(Color::Selected.color(cx)),
+            )
             .child(
                 ListItem::new(entry_id.to_proto() as usize)
                     .indent_level(depth)
+                    // TODO: This should be 15
                     .indent_step_size(px(settings.indent_size))
-                    .selected(is_marked || is_active)
-                    .when_some(canonical_path, |this, path| {
-                        this.end_slot::<AnyElement>(
-                            div()
-                                .id("symlink_icon")
-                                .pr_3()
-                                .tooltip(move |cx| {
-                                    Tooltip::text(format!("{path} • Symbolic Link"), cx)
-                                })
-                                .child(
-                                    Icon::new(IconName::ArrowUpRight)
-                                        .size(IconSize::Indicator)
-                                        .color(filename_text_color),
-                                )
-                                .into_any_element(),
-                        )
-                    })
-                    .child(if let Some(icon) = &icon {
-                        h_flex().child(Icon::from_path(icon.to_string()).color(filename_text_color))
-                    } else {
-                        h_flex()
-                            .size(IconSize::default().rems())
-                            .invisible()
-                            .flex_none()
-                    })
-                    .child(
-                        if let (Some(editor), true) = (Some(&self.filename_editor), show_editor) {
-                            h_flex().h_6().w_full().child(editor.clone())
-                        } else {
-                            h_flex().h_6().child(
-                                Label::new(file_name)
-                                    .single_line()
-                                    .color(filename_text_color),
-                            )
-                        }
-                        .ml_1(),
-                    )
+                    // TODO: These are not the same thing
+                    .selected(is_selected || is_active)
                     .on_click(cx.listener(move |this, event: &gpui::ClickEvent, cx| {
                         if event.down.button == MouseButton::Right || event.down.first_mouse {
                             return;
                         }
-                        if !show_editor {
+                        if !show_rename_editor {
                             cx.stop_propagation();
 
                             if let Some(selection) =
@@ -2223,7 +2215,7 @@ impl ProjectPanel {
                                 } else if !this.marked_entries.insert(selection) {
                                     this.marked_entries.remove(&selection);
                                 }
-                            } else if kind.is_dir() {
+                            } else if worktree_entry_kind.is_dir() {
                                 this.toggle_expanded(entry_id, cx);
                             } else {
                                 let click_count = event.up.click_count;
@@ -2244,27 +2236,46 @@ impl ProjectPanel {
                             cx.stop_propagation();
                             this.deploy_context_menu(event.position, entry_id, cx);
                         },
-                    )),
-            )
-            .border_1()
-            .border_r_2()
-            .rounded_none()
-            .hover(|style| {
-                if is_active {
-                    style
-                } else {
-                    let hover_color = cx.theme().colors().ghost_element_hover;
-                    style.bg(hover_color).border_color(hover_color)
-                }
-            })
-            .when(is_marked || is_active, |this| {
-                let colors = cx.theme().colors();
-                this.when(is_marked, |this| this.bg(colors.ghost_element_selected))
-                    .border_color(colors.ghost_element_selected)
-            })
-            .when(
-                is_active && self.focus_handle.contains_focused(cx),
-                |this| this.border_color(Color::Selected.color(cx)),
+                    ))
+                    .when_some(canonical_path, |this, path| {
+                        this.end_slot::<AnyElement>(
+                            div()
+                                .id("symlink_icon")
+                                .pr_3()
+                                .tooltip(move |cx| {
+                                    Tooltip::text(format!("Symbolic Link (Target: {path})"), cx)
+                                })
+                                .child(
+                                    Icon::new(IconName::ArrowUpRight)
+                                        .size(IconSize::Indicator)
+                                        .color(label_color),
+                                )
+                                .into_any_element(),
+                        )
+                    })
+                    .child(if let Some(icon) = &icon {
+                        h_flex()
+                            .flex_none()
+                            .child(Icon::from_path(icon.to_string()).color(label_color))
+                    } else {
+                        h_flex()
+                            .flex_none()
+                            .size(IconSize::default().rems())
+                            .invisible()
+                            .flex_none()
+                    })
+                    .child(
+                        if let (Some(editor), true) =
+                            (Some(&self.filename_editor), show_rename_editor)
+                        {
+                            h_flex().h_6().w_full().child(editor.clone())
+                        } else {
+                            h_flex()
+                                .h_6()
+                                .child(Label::new(label).single_line().color(label_color))
+                        }
+                        .ml_1(),
+                    ),
             )
     }
 
@@ -2274,7 +2285,7 @@ impl ProjectPanel {
         cx: &mut ViewContext<Self>,
     ) -> Option<Stateful<Div>> {
         let settings = ProjectPanelSettings::get_global(cx);
-        if settings.scrollbar.show == ShowScrollbar::Never {
+        if settings.scrollbar.show == ScrollbarVisibility::Never {
             return None;
         }
         let scroll_handle = self.scroll_handle.0.borrow();
@@ -2432,15 +2443,6 @@ impl Render for ProjectPanel {
                 .group("project-panel")
                 .size_full()
                 .relative()
-                .on_hover(cx.listener(|this, hovered, cx| {
-                    if *hovered {
-                        this.show_scrollbar = true;
-                        this.hide_scrollbar_task.take();
-                        cx.notify();
-                    } else if !this.focus_handle.contains_focused(cx) {
-                        this.hide_scrollbar(cx);
-                    }
-                }))
                 .key_context(self.dispatch_context(cx))
                 .on_action(cx.listener(Self::select_next))
                 .on_action(cx.listener(Self::select_prev))
@@ -2459,8 +2461,8 @@ impl Render for ProjectPanel {
                 .on_action(cx.listener(Self::new_search_in_directory))
                 .on_action(cx.listener(Self::unfold_directory))
                 .on_action(cx.listener(Self::fold_directory))
-                .when(!project.is_read_only(), |el| {
-                    el.on_action(cx.listener(Self::new_file))
+                .when(!project.is_read_only(), |this| {
+                    this.on_action(cx.listener(Self::new_file))
                         .on_action(cx.listener(Self::new_directory))
                         .on_action(cx.listener(Self::rename))
                         .on_action(cx.listener(Self::delete))
@@ -2507,6 +2509,15 @@ impl Render for ProjectPanel {
                     }),
                 )
                 .track_focus(&self.focus_handle)
+                .on_hover(cx.listener(|this, hovered, cx| {
+                    if *hovered {
+                        this.show_scrollbar = true;
+                        this.hide_scrollbar_task.take();
+                        cx.notify();
+                    } else if !this.focus_handle.contains_focused(cx) {
+                        this.hide_scrollbar(cx);
+                    }
+                }))
                 .child(
                     uniform_list(cx.view().clone(), "entries", items_count, {
                         |this, range, cx| {

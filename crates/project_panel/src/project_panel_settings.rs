@@ -3,6 +3,7 @@ use gpui::Pixels;
 use schemars::JsonSchema;
 use serde_derive::{Deserialize, Serialize};
 use settings::{Settings, SettingsSources};
+use ui::ScrollbarVisibility;
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, Copy, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -25,25 +26,12 @@ pub struct ProjectPanelSettings {
     pub scrollbar: ScrollbarSettings,
 }
 
-/// When to show the scrollbar in the project panel.
-///
-/// Default: always
-#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ShowScrollbar {
-    #[default]
-    /// Always show the scrollbar.
-    Always,
-    /// Never show the scrollbar.
-    Never,
-}
-
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct ScrollbarSettings {
     /// When to show the scrollbar in the project panel.
     ///
     /// Default: always
-    pub show: ShowScrollbar,
+    pub show: ScrollbarVisibility,
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -51,7 +39,7 @@ pub struct ScrollbarSettingsContent {
     /// When to show the scrollbar in the project panel.
     ///
     /// Default: always
-    pub show: Option<ShowScrollbar>,
+    pub show: Option<ScrollbarVisibility>,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize, JsonSchema, Debug)]
