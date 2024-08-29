@@ -747,6 +747,13 @@
   },
   // Different settings for specific languages.
   "languages": {
+    "Rust": {
+      "tasks": {
+        "extra_env": {
+          "RUST_BACKTRACE": "0"
+        }
+      }
+    },
     "Astro": {
       "prettier": {
         "allowed": true,

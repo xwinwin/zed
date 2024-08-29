@@ -9278,7 +9278,7 @@ impl Project {
         })?;
         let task_context = context_task.await.unwrap_or_default();
         Ok(proto::TaskContext {
-            project_env: task_context.project_env.into_iter().collect(),
+            project_env: task_context.extra_env.into_iter().collect(),
             cwd: task_context
                 .cwd
                 .map(|cwd| cwd.to_string_lossy().to_string()),
@@ -10292,6 +10292,16 @@ impl Project {
         location: Location,
         cx: &mut ModelContext<'_, Project>,
     ) -> Task<Option<TaskContext>> {
+        let extra_env = location.buffer.update(cx, |buffer, cx| {
+            language_settings(
+                buffer.language_at(location.range.start).as_ref(),
+                buffer.file(),
+                cx,
+            )
+            .tasks
+            .extra_env
+            .clone()
+        });
         if self.is_local_or_ssh() {
             let (worktree_id, worktree_abs_path) = if let Some(worktree) = self.task_worktree(cx) {
                 (
@@ -10328,11 +10338,14 @@ impl Project {
                     .ok()?
                     .await;
 
-                Some(TaskContext {
-                    project_env: project_env.unwrap_or_default(),
+                let mut project_env = project_env.unwrap_or_default();
+                project_env.extend(extra_env);
+                let task_context = TaskContext {
+                    extra_env: project_env,
                     cwd: worktree_abs_path.map(|p| p.to_path_buf()),
                     task_variables,
-                })
+                };
+                Some(task_context)
             })
         } else if let Some(project_id) = self
             .remote_id()
@@ -10348,8 +10361,13 @@ impl Project {
             });
             cx.background_executor().spawn(async move {
                 let task_context = task_context.await.log_err()?;
+                let mut new_extra_env = task_context
+                    .project_env
+                    .into_iter()
+                    .collect::<HashMap<_, _>>();
+                new_extra_env.extend(extra_env);
                 Some(TaskContext {
-                    project_env: task_context.project_env.into_iter().collect(),
+                    extra_env: new_extra_env,
                     cwd: task_context.cwd.map(PathBuf::from),
                     task_variables: task_context
                         .task_variables

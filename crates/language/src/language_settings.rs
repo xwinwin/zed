@@ -767,8 +767,11 @@ fn scroll_debounce_ms() -> u64 {
 }
 
 /// The task settings for a particular language.
-#[derive(Debug, Clone, Deserialize, PartialEq, Serialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Deserialize, PartialEq, Serialize, JsonSchema)]
+#[serde(default)]
 pub struct LanguageTaskConfig {
+    /// Extra environment variables to set for a particular language.
+    pub extra_env: HashMap<String, String>,
     /// Extra task variables to set for a particular language.
     pub variables: HashMap<String, String>,
 }

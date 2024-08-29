@@ -32,6 +32,9 @@
     },
     "Rust": {
       "tasks": {
+        "extra_env": {
+          "RUST_BACKTRACE": "0"
+        },
         "variables": {
           "RUST_DEFAULT_PACKAGE_RUN": "zed"
         }

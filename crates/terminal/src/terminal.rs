@@ -320,6 +320,11 @@ impl TerminalBuilder {
         completion_tx: Sender<()>,
         cx: &mut AppContext,
     ) -> Result<TerminalBuilder> {
+        if task.is_some() {
+            // TODO kb we set the correct env vars to be RUST_BACTRACE=0, but Alacritty(?) does not propagate that inside our
+            // '/bin/zsh -i -c `BLAH`' command. How to override this?
+            dbg!(&env);
+        };
         // TODO: Properly set the current locale,
         env.entry("LC_ALL".to_string())
             .or_insert_with(|| "en_US.UTF-8".to_string());

@@ -471,15 +471,18 @@ impl ContextProvider for RustContextProvider {
                     RUST_PACKAGE_TASK_VARIABLE.template_value(),
                     VariableName::Symbol.template_value(),
                 ),
-                command: "cargo".into(),
-                args: vec![
-                    "test".into(),
-                    "-p".into(),
-                    RUST_PACKAGE_TASK_VARIABLE.template_value(),
-                    VariableName::Symbol.template_value(),
-                    "--".into(),
-                    "--nocapture".into(),
-                ],
+                // TODO kb
+                //command: "cargo".into(),
+                // args: vec![
+                //     "test".into(),
+                //     "-p".into(),
+                //     RUST_PACKAGE_TASK_VARIABLE.template_value(),
+                //     VariableName::Symbol.template_value(),
+                //     "--".into(),
+                //     "--nocapture".into(),
+                // ],
+                command: "echo".into(),
+                args: vec!["$RUST_BACKTRACE".into()],
                 tags: vec!["rust-test".to_owned()],
                 cwd: Some("$ZED_DIRNAME".to_owned()),
                 ..TaskTemplate::default()

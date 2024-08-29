@@ -239,10 +239,11 @@ pub struct TaskContext {
     pub cwd: Option<PathBuf>,
     /// Additional environment variables associated with a given task.
     pub task_variables: TaskVariables,
+    /// TODO kb: fill in info about environment from settings
     /// Environment variables obtained when loading the project into Zed.
     /// This is the environment one would get when `cd`ing in a terminal
     /// into the project's root directory.
-    pub project_env: HashMap<String, String>,
+    pub extra_env: HashMap<String, String>,
 }
 
 /// This is a new type representing a 'tag' on a 'runnable symbol', typically a test of main() function, found via treesitter.

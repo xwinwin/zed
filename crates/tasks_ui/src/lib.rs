@@ -307,7 +307,7 @@ mod tests {
                     (VariableName::Row, "1".into()),
                     (VariableName::Column, "1".into()),
                 ]),
-                project_env: HashMap::default(),
+                extra_env: HashMap::default(),
             }
         );
 
@@ -334,7 +334,7 @@ mod tests {
                     (VariableName::SelectedText, "is_i".into()),
                     (VariableName::Symbol, "this_is_a_rust_file".into()),
                 ]),
-                project_env: HashMap::default(),
+                extra_env: HashMap::default(),
             }
         );
 
@@ -359,7 +359,7 @@ mod tests {
                     (VariableName::Column, "1".into()),
                     (VariableName::Symbol, "this_is_a_test".into()),
                 ]),
-                project_env: HashMap::default(),
+                extra_env: HashMap::default(),
             }
         );
     }
