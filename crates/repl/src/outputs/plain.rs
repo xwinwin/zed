@@ -50,7 +50,7 @@ pub struct TerminalOutput {
     /// ANSI escape sequence processor for parsing input text.
     parser: Processor,
     /// Alacritty terminal instance that manages the terminal state and content.
-    handler: alacritty_terminal::Term<ZedListener>,
+    handler: Model<alacritty_terminal::Term<ZedListener>>,
 }
 
 const DEFAULT_NUM_LINES: usize = 32;
@@ -124,11 +124,16 @@ impl TerminalOutput {
     ///
     pub fn new(cx: &mut WindowContext) -> Self {
         let (events_tx, events_rx) = futures::channel::mpsc::unbounded();
-        let term = alacritty_terminal::Term::new(
-            Config::default(),
-            &terminal_size(cx),
-            terminal::ZedListener(events_tx.clone()),
-        );
+
+        let size = &terminal_size(cx);
+
+        let term = cx.new_model(|_| {
+            alacritty_terminal::Term::new(
+                Config::default(),
+                size,
+                terminal::ZedListener(events_tx.clone()),
+            )
+        });
 
         mem::forget(events_rx);
         Self {
@@ -184,13 +189,15 @@ impl TerminalOutput {
     /// * `text` - A string slice containing the text to be appended.
     pub fn append_text(&mut self, text: &str, cx: &mut WindowContext) {
         for byte in text.as_bytes() {
-            if *byte == b'\n' {
-                // Dirty (?) hack to move the cursor down
-                self.parser.advance(&mut self.handler, b'\r');
-                self.parser.advance(&mut self.handler, b'\n');
-            } else {
-                self.parser.advance(&mut self.handler, *byte);
-            }
+            self.handler.update(cx, |handler, _| {
+                if *byte == b'\n' {
+                    // Dirty (?) hack to move the cursor down
+                    self.parser.advance(handler, b'\r');
+                    self.parser.advance(handler, b'\n');
+                } else {
+                    self.parser.advance(handler, *byte);
+                }
+            });
         }
 
         // This will keep the buffer up to date, though with some terminal codes it won't be perfect
@@ -201,20 +208,24 @@ impl TerminalOutput {
         }
     }
 
-    fn full_text(&self) -> String {
+    fn full_text(&self, cx: &WindowContext) -> String {
         let mut full_text = String::new();
 
+        let handler = self.handler.read(cx);
+
         // Get the total number of lines, including history
-        let total_lines = self.handler.grid().total_lines();
-        let visible_lines = self.handler.screen_lines();
+        let total_lines = handler.grid().total_lines();
+        let visible_lines = handler.screen_lines();
         let history_lines = total_lines - visible_lines;
+
+        let columns = handler.columns();
 
         // Capture history lines in correct order (oldest to newest)
         for line in (0..history_lines).rev() {
             let line_index = Line(-(line as i32) - 1);
             let start = Point::new(line_index, Column(0));
-            let end = Point::new(line_index, Column(self.handler.columns() - 1));
-            let line_content = self.handler.bounds_to_string(start, end);
+            let end = Point::new(line_index, Column(columns - 1));
+            let line_content = handler.bounds_to_string(start, end);
 
             if !line_content.trim().is_empty() {
                 full_text.push_str(&line_content);
@@ -226,8 +237,8 @@ impl TerminalOutput {
         for line in 0..visible_lines {
             let line_index = Line(line as i32);
             let start = Point::new(line_index, Column(0));
-            let end = Point::new(line_index, Column(self.handler.columns() - 1));
-            let line_content = self.handler.bounds_to_string(start, end);
+            let end = Point::new(line_index, Column(handler.columns() - 1));
+            let line_content = handler.bounds_to_string(start, end);
 
             if !line_content.trim().is_empty() {
                 full_text.push_str(&line_content);
@@ -252,6 +263,7 @@ impl Render for TerminalOutput {
 
         let grid = self
             .handler
+            .read(cx)
             .renderable_content()
             .display_iter
             .map(|ic| terminal::IndexedCell {
@@ -273,9 +285,15 @@ impl Render for TerminalOutput {
             .map(|advance| advance.width)
             .unwrap_or(Pixels(0.0));
 
+        let handler = self.handler.clone();
         canvas(
             // prepaint
-            move |_bounds, _| {},
+            move |_bounds, _| {
+                handler.update(cx, |handler, _| {
+                    let size = TerminalSize {};
+                    // handler.resize(size);
+                })
+            },
             // paint
             move |bounds, _, cx| {
                 for rect in rects {
@@ -310,8 +328,8 @@ impl Render for TerminalOutput {
 }
 
 impl OutputContent for TerminalOutput {
-    fn clipboard_content(&self, _cx: &WindowContext) -> Option<ClipboardItem> {
-        Some(ClipboardItem::new_string(self.full_text()))
+    fn clipboard_content(&self, cx: &WindowContext) -> Option<ClipboardItem> {
+        Some(ClipboardItem::new_string(self.full_text(cx)))
     }
 
     fn has_clipboard_content(&self, _cx: &WindowContext) -> bool {
@@ -327,9 +345,11 @@ impl OutputContent for TerminalOutput {
             return self.full_buffer.clone();
         }
 
+        let full_text = self.full_text(cx);
+
         let buffer = cx.new_model(|cx| {
             let mut buffer =
-                Buffer::local(self.full_text(), cx).with_language(language::PLAIN_TEXT.clone(), cx);
+                Buffer::local(full_text, cx).with_language(language::PLAIN_TEXT.clone(), cx);
             buffer.set_capability(language::Capability::ReadOnly, cx);
             buffer
         });
