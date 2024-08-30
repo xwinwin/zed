@@ -154,8 +154,13 @@ impl AssistantSettingsContent {
                                         models
                                             .into_iter()
                                             .filter_map(|model| match model {
-                                                open_ai::Model::Custom { name, max_tokens,max_output_tokens } => {
-                                                    Some(language_model::provider::open_ai::AvailableModel { name, max_tokens,max_output_tokens })
+                                                open_ai::Model::Custom { name, display_name, max_tokens, max_output_tokens } => {
+                                                    Some(language_model::provider::open_ai::AvailableModel {
+                                                        name,
+                                                        display_name,
+                                                        max_tokens,
+                                                        max_output_tokens
+                                                    })
                                                 }
                                                 _ => None,
                                             })
